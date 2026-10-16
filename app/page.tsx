@@ -108,6 +108,66 @@ function TaskCard({ task }: { task: Task }) {
   </article>
 }
 
+const workspaceData: Record<string, { label: string; value: string; detail: string }[]> = {
+  Docs: [
+    { label: 'Project brief', value: '12 pages', detail: 'Updated 2 hours ago' },
+    { label: 'Brand guidelines', value: '8 pages', detail: 'Updated yesterday' },
+    { label: 'Meeting notes', value: '24 pages', detail: 'Updated Monday' },
+  ],
+  Schedule: [
+    { label: 'Design review', value: 'Today · 2:00 PM', detail: 'Marketing team' },
+    { label: 'Sprint planning', value: 'Tomorrow · 10:00 AM', detail: 'Product team' },
+    { label: 'Client handoff', value: 'Friday · 3:30 PM', detail: 'Stellar team' },
+  ],
+  Chat: [
+    { label: 'Design team', value: '8 members', detail: 'Last message 12m ago' },
+    { label: 'Stellar client', value: '4 members', detail: 'Last message 1h ago' },
+    { label: 'Product updates', value: '16 members', detail: 'Last message yesterday' },
+  ],
+  Payments: [
+    { label: 'Stellar invoice #1042', value: '$4,800', detail: 'Due in 4 days' },
+    { label: 'Taskz invoice #1041', value: '$2,250', detail: 'Paid 2 days ago' },
+    { label: 'Acme retainer', value: '$6,000', detail: 'Due next month' },
+  ],
+  Customers: [
+    { label: 'Stellar Studio', value: 'Active client', detail: '3 active projects' },
+    { label: 'Taskz Labs', value: 'Active client', detail: '2 active projects' },
+    { label: 'Acme Inc.', value: 'Prospect', detail: 'Last contacted Monday' },
+  ],
+  Automations: [
+    { label: 'Weekly progress report', value: 'Active', detail: 'Runs every Friday' },
+    { label: 'Due date reminders', value: 'Active', detail: 'Runs daily at 9:00 AM' },
+    { label: 'New client welcome', value: 'Paused', detail: 'Last ran 3 days ago' },
+  ],
+  'User Management': [
+    { label: 'Alex Morgan', value: 'Admin', detail: 'alex@taskflow.com' },
+    { label: 'Shivam Chavan', value: 'Member', detail: 'shivam@taskflow.com' },
+    { label: 'Maya Patel', value: 'Member', detail: 'maya@taskflow.com' },
+  ],
+  Workflows: [
+    { label: 'Website launch', value: '6 steps', detail: 'Next: QA review' },
+    { label: 'Client onboarding', value: '4 steps', detail: 'Next: Send welcome email' },
+    { label: 'Content approval', value: '3 steps', detail: 'Next: Editorial review' },
+  ],
+  Store: [
+    { label: 'UI kit license', value: 'Digital product', detail: '23 sales this month' },
+    { label: 'Brand workshop', value: 'Service', detail: '5 bookings this month' },
+  ],
+  Company: [
+    { label: 'TaskFlow Studio', value: 'Design agency', detail: '12 team members' },
+    { label: 'Quarterly goals', value: '78% complete', detail: 'Review in 18 days' },
+  ],
+  Employee: [
+    { label: 'Shivam Chavan', value: 'Product designer', detail: '12 assigned tasks' },
+    { label: 'Maya Patel', value: 'Project manager', detail: '8 assigned tasks' },
+  ],
+}
+
+function WorkspacePage({ page }: { page: string }) {
+  const items = workspaceData[page] ?? []
+  return <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map((item) => <article key={item.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] text-slate-400">{page}</p><h2 className="mt-2 text-sm font-semibold text-slate-800">{item.label}</h2></div><span className="rounded-full bg-violet-50 px-2 py-1 text-[9px] font-semibold text-violet-700">{item.value}</span></div><p className="mt-6 text-[10px] text-slate-400">{item.detail}</p></article>)}</div>
+}
+
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [view, setView] = useState<DashboardView>('Board')
   const [activePage, setActivePage] = useState('Tasks')
@@ -119,7 +179,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     {mobileOpen && <div className="fixed inset-0 z-40 flex lg:hidden"><button aria-label="Close navigation" className="flex-1 bg-slate-950/30" onClick={() => setMobileOpen(false)} /><Sidebar mobile activePage={activePage} onNavigate={navigate} onLogout={onLogout} /></div>}
     <section className="min-w-0 flex-1 bg-white"><header className="flex h-16 items-center justify-between border-b border-slate-100 px-5 sm:px-8"><button aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-md p-1 hover:bg-slate-100 lg:hidden"><Menu className="size-5 text-slate-600" /></button><div className="flex items-center gap-3 lg:hidden"><Brand /></div><div className="ml-auto flex items-center gap-4"><Bell className="size-4 text-slate-400" /><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700">AM</span><span className="hidden text-xs font-medium text-slate-700 sm:block">Alex Morgan</span><ChevronDown className="size-3 text-slate-400" /></div></div></header>
       <div className="overflow-x-auto px-5 py-6 sm:px-8"><div className="flex items-center gap-2 text-[10px] text-slate-400"><span>⌂</span><span>/</span><span>{activePage}</span><span>/</span><span className="font-medium text-slate-700">Overview</span></div><div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>{activePage === 'Tasks' && <div className="mt-4 flex min-w-max items-center gap-1 border-b border-slate-100">{(['Board', 'List', 'Timeline', 'Due Tasks'] as DashboardView[]).map((item) => <button key={item} onClick={() => setView(item)} className={`px-3 py-2 text-[10px] font-medium transition ${view === item ? 'border-b-2 border-violet-600 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>{item}</button>)}</div>}</div><div className="flex shrink-0 gap-2"><button className="flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"><ArrowRight className="size-3 rotate-90" />Import</button><button className="flex h-8 items-center gap-2 rounded-md bg-slate-900 px-3 text-[10px] font-semibold text-white hover:bg-slate-700"><Plus className="size-3" />New Board</button></div></div>
-        {activePage === 'Tasks' && view === 'Board' ? <div className="mt-7 grid min-w-[850px] grid-cols-4 gap-4">{columns.map((column) => <section key={column.title} className="min-w-0"><div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[10px] font-bold text-slate-800"><span className={`size-1.5 rounded-full ${column.color}`} />{column.title}<span className="font-normal text-slate-400">{column.tasks.length}</span></h2><div className="flex gap-2 text-slate-400"><Plus className="size-3" /><MoreHorizontal className="size-3" /></div></div><div className="flex flex-col gap-3">{column.tasks.map((task) => <TaskCard key={task.title} task={task} />)}</div><button className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-violet-700"><Plus className="size-3" />Add new</button></section>)}</div> : <div className="mx-auto mt-10 max-w-2xl rounded-xl border border-dashed border-slate-200 p-12 text-center"><Sparkles className="mx-auto size-5 text-violet-500" /><p className="mt-3 text-sm font-semibold text-slate-800">{activePage === 'Tasks' ? `${view} view is ready for your workflow` : `${activePage} workspace is ready`}</p><p className="mt-1 text-xs text-slate-400">Use the navigation to move between your workspace areas.</p></div>}
+        {activePage === 'Tasks' && view === 'Board' ? <div className="mt-7 grid min-w-[850px] grid-cols-4 gap-4">{columns.map((column) => <section key={column.title} className="min-w-0"><div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[10px] font-bold text-slate-800"><span className={`size-1.5 rounded-full ${column.color}`} />{column.title}<span className="font-normal text-slate-400">{column.tasks.length}</span></h2><div className="flex gap-2 text-slate-400"><Plus className="size-3" /><MoreHorizontal className="size-3" /></div></div><div className="flex flex-col gap-3">{column.tasks.map((task) => <TaskCard key={task.title} task={task} />)}</div><button className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-violet-700"><Plus className="size-3" />Add new</button></section>)}</div> : activePage === 'Tasks' ? <WorkspacePage page={view} /> : <WorkspacePage page={activePage} />}
       </div></section></main>
 }
 
