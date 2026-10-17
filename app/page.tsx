@@ -1,195 +1,57 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  ArrowRight,
-  Bell,
-  Check,
-  ChevronDown,
-  Circle,
-  Eye,
-  EyeOff,
-  FileText,
-  Folder,
-  Home,
-  LayoutGrid,
-  List,
-  LockKeyhole,
-  Mail,
-  Menu,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Settings,
-  Sparkles,
-  UserRound,
-  Users,
-} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowRight, Bell, Check, ChevronDown, Circle, FileText, Folder, Home, LayoutGrid, List, LockKeyhole, Mail, Menu, MoreHorizontal, Plus, Search, Settings, Users, UserRound, X } from 'lucide-react'
 
 type AuthMode = 'login' | 'signup'
 type DashboardView = 'Board' | 'List' | 'Timeline' | 'Due Tasks'
-
-type Task = {
-  title: string
-  client: string
-  assignee: string
-  tags: string[]
-  meta?: string
-}
+type Task = { title: string; client: string; assignee: string; tags: string[]; meta?: string; due?: string; status: string }
+type WorkspaceItem = { label: string; value: string; detail: string }
 
 const benefits = ['Unlimited projects and tasks', 'Shared views for every team', 'Insights that keep work moving']
-
-const columns: { title: string; color: string; tasks: Task[] }[] = [
-  {
-    title: 'To Do',
-    color: 'bg-sky-500',
-    tasks: [
-      { title: 'Change Top CTA button', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4 · 50% · 2' },
-      { title: 'Redesign analytics dashboard', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['SaaS', 'Mobile'], meta: '4' },
-      { title: 'Create landing page', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4' },
-    ],
-  },
-  {
-    title: 'In Progress',
-    color: 'bg-amber-500',
-    tasks: [
-      { title: 'Redesign news page', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4 · 50%' },
-      { title: 'Copywrite', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4' },
-    ],
-  },
-  {
-    title: 'In Review',
-    color: 'bg-violet-500',
-    tasks: [
-      { title: 'UI Animation for the onboarding...', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4 · 50%' },
-      { title: 'UI Dark mode improvements', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['SaaS', 'Mobile'], meta: '4' },
-      { title: 'Mobile Redesign', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Mobile'], meta: '4' },
-    ],
-  },
-  {
-    title: 'Completed',
-    color: 'bg-emerald-500',
-    tasks: [
-      { title: 'Navigation improvement', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4' },
-      { title: 'Text Animation', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4' },
-    ],
-  },
+const initialTasks: Task[] = [
+  { title: 'Change Top CTA button', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4 · 50% · 2', due: 'Today', status: 'To Do' },
+  { title: 'Redesign analytics dashboard', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['SaaS', 'Mobile'], meta: '4', due: 'Tomorrow', status: 'To Do' },
+  { title: 'Create landing page', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4', due: 'Friday', status: 'To Do' },
+  { title: 'Redesign news page', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4 · 50%', due: 'Today', status: 'In Progress' },
+  { title: 'Copywrite', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4', due: 'Next week', status: 'In Progress' },
+  { title: 'UI Animation for the onboarding flow', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Web', 'SaaS'], meta: '4 · 50%', due: 'Thursday', status: 'In Review' },
+  { title: 'UI Dark mode improvements', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['SaaS', 'Mobile'], meta: '4', due: 'Friday', status: 'In Review' },
+  { title: 'Mobile Redesign', client: 'Stellar', assignee: 'Shivam Chavan', tags: ['Mobile'], meta: '4', due: 'Next week', status: 'In Review' },
+  { title: 'Navigation improvement', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4', due: 'Done', status: 'Completed' },
+  { title: 'Text Animation', client: 'Taskz', assignee: 'Shivam Chavan', tags: ['Web'], meta: '4', due: 'Done', status: 'Completed' },
 ]
-
-function Brand() {
-  return <div className="flex items-center gap-2.5">
-    <span className="relative flex size-8 items-center justify-center overflow-hidden rounded-[10px] bg-slate-950 shadow-sm" aria-hidden="true">
-      <span className="absolute left-[7px] top-[8px] h-[3px] w-[14px] -rotate-45 rounded-full bg-violet-300" />
-      <span className="absolute left-[9px] top-[14px] h-[3px] w-[12px] rotate-45 rounded-full bg-violet-500" />
-      <span className="absolute left-[12px] top-[18px] h-[3px] w-[10px] -rotate-45 rounded-full bg-violet-700" />
-      <span className="absolute bottom-1.5 right-1.5 size-1.5 rounded-full bg-white" />
-    </span>
-    <span className="font-bold tracking-tight">TaskFlow</span>
-  </div>
+const statusColors: Record<string, string> = { 'To Do': 'bg-sky-500', 'In Progress': 'bg-amber-500', 'In Review': 'bg-violet-500', Completed: 'bg-emerald-500' }
+const workspaceData: Record<string, WorkspaceItem[]> = {
+  Docs: [{ label: 'Project brief', value: '12 pages', detail: 'Updated 2 hours ago' }, { label: 'Brand guidelines', value: '8 pages', detail: 'Updated yesterday' }, { label: 'Meeting notes', value: '24 pages', detail: 'Updated Monday' }],
+  Schedule: [{ label: 'Design review', value: 'Today · 2:00 PM', detail: 'Marketing team' }, { label: 'Sprint planning', value: 'Tomorrow · 10:00 AM', detail: 'Product team' }, { label: 'Client handoff', value: 'Friday · 3:30 PM', detail: 'Stellar team' }],
+  Chat: [{ label: 'Design team', value: '8 members', detail: 'Last message 12m ago' }, { label: 'Stellar client', value: '4 members', detail: 'Last message 1h ago' }, { label: 'Product updates', value: '16 members', detail: 'Last message yesterday' }],
+  Payments: [{ label: 'Stellar invoice #1042', value: '$4,800', detail: 'Due in 4 days' }, { label: 'Taskz invoice #1041', value: '$2,250', detail: 'Paid 2 days ago' }, { label: 'Acme retainer', value: '$6,000', detail: 'Due next month' }],
+  Customers: [{ label: 'Stellar Studio', value: 'Active client', detail: '3 active projects' }, { label: 'Taskz Labs', value: 'Active client', detail: '2 active projects' }, { label: 'Acme Inc.', value: 'Prospect', detail: 'Last contacted Monday' }],
+  Automations: [{ label: 'Weekly progress report', value: 'Active', detail: 'Runs every Friday' }, { label: 'Due date reminders', value: 'Active', detail: 'Runs daily at 9:00 AM' }, { label: 'New client welcome', value: 'Paused', detail: 'Last ran 3 days ago' }],
+  'User Management': [{ label: 'Alex Morgan', value: 'Admin', detail: 'alex@taskflow.com' }, { label: 'Shivam Chavan', value: 'Member', detail: 'shivam@taskflow.com' }, { label: 'Maya Patel', value: 'Member', detail: 'maya@taskflow.com' }],
+  Workflows: [{ label: 'Website launch', value: '6 steps', detail: 'Next: QA review' }, { label: 'Client onboarding', value: '4 steps', detail: 'Next: Send welcome email' }, { label: 'Content approval', value: '3 steps', detail: 'Next: Editorial review' }],
+  Store: [{ label: 'UI kit license', value: 'Digital product', detail: '23 sales this month' }, { label: 'Brand workshop', value: 'Service', detail: '5 bookings this month' }],
+  Company: [{ label: 'TaskFlow Studio', value: 'Design agency', detail: '12 team members' }, { label: 'Quarterly goals', value: '78% complete', detail: 'Review in 18 days' }],
+  Employee: [{ label: 'Shivam Chavan', value: 'Product designer', detail: '12 assigned tasks' }, { label: 'Maya Patel', value: 'Project manager', detail: '8 assigned tasks' }],
 }
+
+function Brand() { return <div className="flex items-center gap-2.5"><span className="relative flex size-8 items-center justify-center overflow-hidden rounded-[10px] bg-slate-950"><span className="absolute left-[7px] top-[8px] h-[3px] w-[14px] -rotate-45 rounded-full bg-violet-300" /><span className="absolute left-[9px] top-[14px] h-[3px] w-[12px] rotate-45 rounded-full bg-violet-500" /><span className="absolute left-[12px] top-[18px] h-[3px] w-[10px] -rotate-45 rounded-full bg-violet-700" /><span className="absolute bottom-1.5 right-1.5 size-1.5 rounded-full bg-white" /></span><span className="font-bold tracking-tight">TaskFlow</span></div> }
 
 function Sidebar({ activePage, onNavigate, onLogout, mobile = false }: { activePage: string; onNavigate: (page: string) => void; onLogout: () => void; mobile?: boolean }) {
   const nav = [[Home, 'Home'], [LayoutGrid, 'Tasks'], [FileText, 'Docs'], [Circle, 'Schedule'], [Users, 'Chat'], [Folder, 'Payments'], [Users, 'Customers'], [Settings, 'Automations'], [UserRound, 'User Management'], [List, 'Workflows']] as const
-  return <aside className={`${mobile ? 'flex w-72 shadow-2xl' : 'hidden w-[224px] lg:flex'} shrink-0 flex-col border-r border-slate-200 bg-slate-50/95 px-3 py-5`}>
-    <div className="px-3"><Brand /></div>
-    <div className="relative mt-7"><Search className="absolute left-3 top-2.5 size-3.5 text-slate-400" /><input aria-label="Search" placeholder="Search" className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs outline-none placeholder:text-slate-400 focus:border-violet-400" /></div>
-    <nav className="mt-5 flex flex-col gap-1" aria-label="Main navigation">{nav.map(([Icon, label]) => <button key={label} onClick={() => onNavigate(label)} className={`flex h-8 items-center gap-3 rounded-md px-3 text-left text-xs font-medium transition ${activePage === label ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-white hover:text-slate-900'}`}><Icon className="size-3.5" />{label}</button>)}</nav>
-    <div className="mt-5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400"><span>File</span><span className="flex gap-2 text-slate-500"><Plus className="size-3" /><MoreHorizontal className="size-3" /></span></div>
-    <div className="mt-2 flex flex-col gap-1">{['Store', 'Company', 'Employee'].map((item) => <button key={item} onClick={() => onNavigate(item)} className="flex h-8 items-center gap-3 rounded-md px-3 text-xs text-slate-600 hover:bg-white"><Folder className="size-3.5" />{item}</button>)}</div>
-    <div className="mt-auto border-t border-slate-200 px-3 pt-4"><button onClick={onLogout} className="text-xs font-medium text-slate-500 hover:text-violet-700">Sign out</button></div>
-  </aside>
+  return <aside className={`${mobile ? 'flex w-72 shadow-2xl' : 'hidden w-[224px] lg:flex'} shrink-0 flex-col border-r border-slate-200 bg-slate-50/95 px-3 py-5`}><div className="px-3"><Brand /></div><div className="relative mt-7"><Search className="absolute left-3 top-2.5 size-3.5 text-slate-400" /><input aria-label="Search workspace" placeholder="Search" className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-violet-400" /></div><nav className="mt-5 flex flex-col gap-1" aria-label="Main navigation">{nav.map(([Icon, label]) => <button key={label} onClick={() => onNavigate(label)} className={`flex h-8 items-center gap-3 rounded-md px-3 text-left text-xs font-medium transition ${activePage === label ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-white hover:text-slate-900'}`}><Icon className="size-3.5" />{label}</button>)}</nav><div className="mt-5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400"><span>File</span><button aria-label="Add file" className="text-slate-500"><Plus className="size-3" /></button></div><div className="mt-2 flex flex-col gap-1">{['Store', 'Company', 'Employee'].map((item) => <button key={item} onClick={() => onNavigate(item)} className="flex h-8 items-center gap-3 rounded-md px-3 text-left text-xs text-slate-600 hover:bg-white"><Folder className="size-3.5" />{item}</button>)}</div><div className="mt-auto border-t border-slate-200 px-3 pt-4"><button onClick={onLogout} className="text-xs font-medium text-slate-500 hover:text-violet-700">Sign out</button></div></aside>
 }
 
-function TaskCard({ task }: { task: Task }) {
-  return <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-    <p className="text-[9px] text-slate-400">Client: {task.client}</p><h3 className="mt-1 text-[11px] font-semibold leading-4 text-slate-800">{task.title}</h3>
-    <div className="mt-3 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[7px] font-bold text-violet-700">SC</span><span className="truncate text-[9px] text-slate-500">{task.assignee}</span></div><div className="flex gap-1">{task.tags.map((tag) => <span key={tag} className={`rounded px-1 py-0.5 text-[8px] font-medium ${tag === 'Web' ? 'bg-sky-50 text-sky-600' : tag === 'SaaS' ? 'bg-amber-50 text-amber-600' : 'bg-fuchsia-50 text-fuchsia-600'}`}>{tag}</span>)}</div></div>
-    <div className="mt-3 flex items-center justify-between text-[9px] text-slate-400"><span>◌ {task.meta}</span><span>◷ 4d</span></div>
-  </article>
-}
+function TaskCard({ task, onMove, onDelete }: { task: Task; onMove: () => void; onDelete: () => void }) { return <article className="group rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-2"><p className="text-[9px] text-slate-400">Client: {task.client}</p><button aria-label={`Delete ${task.title}`} onClick={onDelete} className="opacity-0 transition group-hover:opacity-100"><X className="size-3 text-slate-400" /></button></div><h3 className="mt-1 text-[11px] font-semibold leading-4 text-slate-800">{task.title}</h3><div className="mt-3 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[7px] font-bold text-violet-700">SC</span><span className="truncate text-[9px] text-slate-500">{task.assignee}</span></div><div className="flex gap-1">{task.tags.map((tag) => <span key={tag} className={`rounded px-1 py-0.5 text-[8px] font-medium ${tag === 'Web' ? 'bg-sky-50 text-sky-600' : tag === 'SaaS' ? 'bg-amber-50 text-amber-600' : 'bg-fuchsia-50 text-fuchsia-600'}`}>{tag}</span>)}</div></div><div className="mt-3 flex items-center justify-between text-[9px] text-slate-400"><span>◌ {task.meta}</span><button onClick={onMove} className="hover:text-violet-700">Move →</button></div></article> }
 
-const workspaceData: Record<string, { label: string; value: string; detail: string }[]> = {
-  Docs: [
-    { label: 'Project brief', value: '12 pages', detail: 'Updated 2 hours ago' },
-    { label: 'Brand guidelines', value: '8 pages', detail: 'Updated yesterday' },
-    { label: 'Meeting notes', value: '24 pages', detail: 'Updated Monday' },
-  ],
-  Schedule: [
-    { label: 'Design review', value: 'Today · 2:00 PM', detail: 'Marketing team' },
-    { label: 'Sprint planning', value: 'Tomorrow · 10:00 AM', detail: 'Product team' },
-    { label: 'Client handoff', value: 'Friday · 3:30 PM', detail: 'Stellar team' },
-  ],
-  Chat: [
-    { label: 'Design team', value: '8 members', detail: 'Last message 12m ago' },
-    { label: 'Stellar client', value: '4 members', detail: 'Last message 1h ago' },
-    { label: 'Product updates', value: '16 members', detail: 'Last message yesterday' },
-  ],
-  Payments: [
-    { label: 'Stellar invoice #1042', value: '$4,800', detail: 'Due in 4 days' },
-    { label: 'Taskz invoice #1041', value: '$2,250', detail: 'Paid 2 days ago' },
-    { label: 'Acme retainer', value: '$6,000', detail: 'Due next month' },
-  ],
-  Customers: [
-    { label: 'Stellar Studio', value: 'Active client', detail: '3 active projects' },
-    { label: 'Taskz Labs', value: 'Active client', detail: '2 active projects' },
-    { label: 'Acme Inc.', value: 'Prospect', detail: 'Last contacted Monday' },
-  ],
-  Automations: [
-    { label: 'Weekly progress report', value: 'Active', detail: 'Runs every Friday' },
-    { label: 'Due date reminders', value: 'Active', detail: 'Runs daily at 9:00 AM' },
-    { label: 'New client welcome', value: 'Paused', detail: 'Last ran 3 days ago' },
-  ],
-  'User Management': [
-    { label: 'Alex Morgan', value: 'Admin', detail: 'alex@taskflow.com' },
-    { label: 'Shivam Chavan', value: 'Member', detail: 'shivam@taskflow.com' },
-    { label: 'Maya Patel', value: 'Member', detail: 'maya@taskflow.com' },
-  ],
-  Workflows: [
-    { label: 'Website launch', value: '6 steps', detail: 'Next: QA review' },
-    { label: 'Client onboarding', value: '4 steps', detail: 'Next: Send welcome email' },
-    { label: 'Content approval', value: '3 steps', detail: 'Next: Editorial review' },
-  ],
-  Store: [
-    { label: 'UI kit license', value: 'Digital product', detail: '23 sales this month' },
-    { label: 'Brand workshop', value: 'Service', detail: '5 bookings this month' },
-  ],
-  Company: [
-    { label: 'TaskFlow Studio', value: 'Design agency', detail: '12 team members' },
-    { label: 'Quarterly goals', value: '78% complete', detail: 'Review in 18 days' },
-  ],
-  Employee: [
-    { label: 'Shivam Chavan', value: 'Product designer', detail: '12 assigned tasks' },
-    { label: 'Maya Patel', value: 'Project manager', detail: '8 assigned tasks' },
-  ],
-}
-
-function WorkspacePage({ page }: { page: string }) {
-  const items = workspaceData[page] ?? []
-  return <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map((item) => <article key={item.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] text-slate-400">{page}</p><h2 className="mt-2 text-sm font-semibold text-slate-800">{item.label}</h2></div><span className="rounded-full bg-violet-50 px-2 py-1 text-[9px] font-semibold text-violet-700">{item.value}</span></div><p className="mt-6 text-[10px] text-slate-400">{item.detail}</p></article>)}</div>
-}
+function WorkspacePage({ page, onAdd }: { page: string; onAdd: () => void }) { const [items, setItems] = useState(workspaceData[page] ?? []); const [selected, setSelected] = useState<WorkspaceItem | null>(null); return <div className="mt-7"><div className="flex items-center justify-between"><p className="text-xs text-slate-500">{items.length} items in this workspace</p><button onClick={() => { const label = window.prompt(`Add ${page} item`); if (label) setItems((current) => [...current, { label, value: 'New item', detail: 'Just added' }]) }} className="flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-[10px] font-semibold text-white"><Plus className="size-3" />Add item</button></div><div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map((item) => <button key={item.label} onClick={() => setSelected(item)} className="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] text-slate-400">{page}</p><h2 className="mt-2 text-sm font-semibold text-slate-800">{item.label}</h2></div><span className="rounded-full bg-violet-50 px-2 py-1 text-[9px] font-semibold text-violet-700">{item.value}</span></div><p className="mt-6 text-[10px] text-slate-400">{item.detail}</p></button>)}</div>{selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-5"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-xs text-violet-600">{page}</p><h2 className="mt-1 text-lg font-bold">{selected.label}</h2></div><button aria-label="Close details" onClick={() => setSelected(null)}><X className="size-4 text-slate-400" /></button></div><p className="mt-6 text-sm text-slate-500">{selected.detail}</p><button onClick={() => setSelected(null)} className="mt-6 w-full rounded-md bg-slate-900 py-2 text-xs font-semibold text-white">Close</button></div></div>}</div> }
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [view, setView] = useState<DashboardView>('Board')
-  const [activePage, setActivePage] = useState('Tasks')
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [view, setView] = useState<DashboardView>('Board'); const [activePage, setActivePage] = useState('Tasks'); const [mobileOpen, setMobileOpen] = useState(false); const [tasks, setTasks] = useState(initialTasks); const [showNewTask, setShowNewTask] = useState(false); const [newTitle, setNewTitle] = useState(''); const [toast, setToast] = useState('');
+  const navigate = (page: string) => { setActivePage(page); setMobileOpen(false) }; const addTask = () => { if (!newTitle.trim()) return; setTasks((current) => [...current, { title: newTitle.trim(), client: 'TaskFlow', assignee: 'Alex Morgan', tags: ['Web'], meta: '0', due: 'Unscheduled', status: 'To Do' }]); setNewTitle(''); setShowNewTask(false); setToast('Task created'); window.setTimeout(() => setToast(''), 1800) }; const moveTask = (title: string) => setTasks((current) => current.map((task) => task.title === title ? { ...task, status: task.status === 'To Do' ? 'In Progress' : task.status === 'In Progress' ? 'In Review' : task.status === 'In Review' ? 'Completed' : 'Completed' } : task)); const filtered = useMemo(() => view === 'Due Tasks' ? tasks.filter((task) => task.due !== 'Done') : tasks, [tasks, view]);
   const pageTitle = activePage === 'Tasks' ? 'Project' : activePage
-  const navigate = (page: string) => { setActivePage(page); setMobileOpen(false) }
-  return <main className="flex min-h-screen bg-white text-slate-900">
-    <Sidebar activePage={activePage} onNavigate={navigate} onLogout={onLogout} />
-    {mobileOpen && <div className="fixed inset-0 z-40 flex lg:hidden"><button aria-label="Close navigation" className="flex-1 bg-slate-950/30" onClick={() => setMobileOpen(false)} /><Sidebar mobile activePage={activePage} onNavigate={navigate} onLogout={onLogout} /></div>}
-    <section className="min-w-0 flex-1 bg-white"><header className="flex h-16 items-center justify-between border-b border-slate-100 px-5 sm:px-8"><button aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-md p-1 hover:bg-slate-100 lg:hidden"><Menu className="size-5 text-slate-600" /></button><div className="flex items-center gap-3 lg:hidden"><Brand /></div><div className="ml-auto flex items-center gap-4"><Bell className="size-4 text-slate-400" /><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700">AM</span><span className="hidden text-xs font-medium text-slate-700 sm:block">Alex Morgan</span><ChevronDown className="size-3 text-slate-400" /></div></div></header>
-      <div className="overflow-x-auto px-5 py-6 sm:px-8"><div className="flex items-center gap-2 text-[10px] text-slate-400"><span>⌂</span><span>/</span><span>{activePage}</span><span>/</span><span className="font-medium text-slate-700">Overview</span></div><div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>{activePage === 'Tasks' && <div className="mt-4 flex min-w-max items-center gap-1 border-b border-slate-100">{(['Board', 'List', 'Timeline', 'Due Tasks'] as DashboardView[]).map((item) => <button key={item} onClick={() => setView(item)} className={`px-3 py-2 text-[10px] font-medium transition ${view === item ? 'border-b-2 border-violet-600 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>{item}</button>)}</div>}</div><div className="flex shrink-0 gap-2"><button className="flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"><ArrowRight className="size-3 rotate-90" />Import</button><button className="flex h-8 items-center gap-2 rounded-md bg-slate-900 px-3 text-[10px] font-semibold text-white hover:bg-slate-700"><Plus className="size-3" />New Board</button></div></div>
-        {activePage === 'Tasks' && view === 'Board' ? <div className="mt-7 grid min-w-[850px] grid-cols-4 gap-4">{columns.map((column) => <section key={column.title} className="min-w-0"><div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[10px] font-bold text-slate-800"><span className={`size-1.5 rounded-full ${column.color}`} />{column.title}<span className="font-normal text-slate-400">{column.tasks.length}</span></h2><div className="flex gap-2 text-slate-400"><Plus className="size-3" /><MoreHorizontal className="size-3" /></div></div><div className="flex flex-col gap-3">{column.tasks.map((task) => <TaskCard key={task.title} task={task} />)}</div><button className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400 hover:text-violet-700"><Plus className="size-3" />Add new</button></section>)}</div> : activePage === 'Tasks' ? <WorkspacePage page={view} /> : <WorkspacePage page={activePage} />}
-      </div></section></main>
+  return <main className="flex min-h-screen bg-white text-slate-900"><Sidebar activePage={activePage} onNavigate={navigate} onLogout={onLogout} />{mobileOpen && <div className="fixed inset-0 z-40 flex lg:hidden"><button aria-label="Close navigation" className="flex-1 bg-slate-950/30" onClick={() => setMobileOpen(false)} /><Sidebar mobile activePage={activePage} onNavigate={navigate} onLogout={onLogout} /></div>}<section className="min-w-0 flex-1"><header className="flex h-16 items-center justify-between border-b border-slate-100 px-5 sm:px-8"><button aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-md p-1 hover:bg-slate-100 lg:hidden"><Menu className="size-5 text-slate-600" /></button><div className="lg:hidden"><Brand /></div><div className="ml-auto flex items-center gap-4"><Bell className="size-4 text-slate-400" /><div className="flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-700">AM</span><span className="hidden text-xs font-medium sm:block">Alex Morgan</span><ChevronDown className="size-3 text-slate-400" /></div></div></header><div className="overflow-x-auto px-5 py-6 sm:px-8"><div className="flex items-center gap-2 text-[10px] text-slate-400"><span>⌂</span><span>/</span><span>{activePage}</span><span>/</span><span className="font-medium text-slate-700">Overview</span></div><div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>{activePage === 'Tasks' && <div className="mt-4 flex min-w-max items-center gap-1 border-b border-slate-100">{(['Board', 'List', 'Timeline', 'Due Tasks'] as DashboardView[]).map((item) => <button key={item} onClick={() => setView(item)} className={`px-3 py-2 text-[10px] font-medium ${view === item ? 'border-b-2 border-violet-600 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>{item}</button>)}</div>}</div><div className="flex shrink-0 gap-2"><button onClick={() => setToast('Import ready for backend connection')} className="flex h-8 items-center gap-2 rounded-md border border-slate-200 px-3 text-[10px] font-semibold text-slate-600"><ArrowRight className="size-3 rotate-90" />Import</button><button onClick={() => setShowNewTask(true)} className="flex h-8 items-center gap-2 rounded-md bg-slate-900 px-3 text-[10px] font-semibold text-white"><Plus className="size-3" />New task</button></div></div>{activePage === 'Tasks' ? view === 'Board' ? <div className="mt-7 grid min-w-[850px] grid-cols-4 gap-4">{['To Do', 'In Progress', 'In Review', 'Completed'].map((status) => <section key={status}><div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[10px] font-bold"><span className={`size-1.5 rounded-full ${statusColors[status]}`} />{status}<span className="font-normal text-slate-400">{filtered.filter((task) => task.status === status).length}</span></h2><button aria-label={`Add task to ${status}`} onClick={() => setShowNewTask(true)}><Plus className="size-3 text-slate-400" /></button></div><div className="flex flex-col gap-3">{filtered.filter((task) => task.status === status).map((task) => <TaskCard key={task.title} task={task} onMove={() => moveTask(task.title)} onDelete={() => setTasks((current) => current.filter((item) => item.title !== task.title))} />)}</div><button onClick={() => setShowNewTask(true)} className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400"><Plus className="size-3" />Add new</button></section>)}</div> : view === 'List' || view === 'Due Tasks' ? <div className="mt-7 overflow-hidden rounded-xl border border-slate-200"><div className="grid grid-cols-[1fr_120px_100px] gap-4 bg-slate-50 px-4 py-3 text-[10px] font-semibold text-slate-500"><span>Task</span><span>Status</span><span>Due</span></div>{filtered.map((task) => <div key={task.title} className="grid grid-cols-[1fr_120px_100px] gap-4 border-t border-slate-100 px-4 py-3 text-xs"><span className="font-medium">{task.title}</span><span className="text-slate-500">{task.status}</span><span className="text-slate-500">{task.due}</span></div>)}</div> : <div className="mt-7 grid gap-3 sm:grid-cols-3">{['This week', 'Next week', 'Later'].map((period) => <div key={period} className="rounded-xl border border-slate-200 bg-slate-50 p-4"><h2 className="text-xs font-bold">{period}</h2><div className="mt-4 flex flex-col gap-2">{filtered.slice(period === 'This week' ? 0 : period === 'Next week' ? 3 : 6, period === 'This week' ? 3 : period === 'Next week' ? 6 : undefined).map((task) => <div key={task.title} className="rounded-lg bg-white p-3 text-[10px] shadow-sm"><p className="font-semibold">{task.title}</p><p className="mt-1 text-slate-400">{task.due}</p></div>)}</div></div>)}</div> : <WorkspacePage page={activePage} onAdd={() => setToast('Ready to connect this workspace to your backend')} />}</div></section>{showNewTask && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-5"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-bold">Create task</h2><button aria-label="Close create task" onClick={() => setShowNewTask(false)}><X className="size-4 text-slate-400" /></button></div><label className="mt-6 block text-xs font-semibold text-slate-600" htmlFor="task-title">Task title</label><input id="task-title" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.keyCode !== 229) addTask() }} placeholder="e.g. Prepare launch checklist" className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-violet-500" /><button onClick={addTask} className="mt-5 w-full rounded-lg bg-slate-900 py-2.5 text-xs font-semibold text-white">Create task</button></div></div>}{toast && <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white">{toast}</div>}</main>
 }
 
-export default function Page() {
-  const [mode, setMode] = useState<AuthMode>('login')
-  const [showPassword, setShowPassword] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const isSignup = mode === 'signup'
-
-  if (isAuthenticated) return <Dashboard onLogout={() => setIsAuthenticated(false)} />
-
-  return <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(300px,0.72fr)_minmax(560px,1.28fr)]"><section className="relative hidden overflow-hidden border-r border-slate-200 bg-slate-50 px-8 py-8 text-slate-900 lg:flex lg:flex-col xl:px-12"><div className="absolute -left-32 top-[-10%] size-[520px] rounded-full bg-violet-100/70 blur-[100px]" /><div className="absolute bottom-[-15%] right-[-12%] size-[500px] rounded-full bg-slate-200/70 blur-[110px]" /><div className="relative"><Brand /></div><div className="relative mt-auto max-w-lg pb-12"><p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-violet-700">Your workspace, in rhythm</p><h1 className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-900 xl:text-6xl">Plan clearly. Ship confidently.</h1><p className="mt-6 max-w-md text-base leading-7 text-slate-500">TaskFlow gives your team one calm, focused place to manage projects, collaborate, and finish strong.</p><div className="mt-10 flex flex-col gap-4">{benefits.map((benefit) => <div key={benefit} className="flex items-center gap-3 text-sm text-slate-600"><span className="flex size-5 items-center justify-center rounded-full bg-violet-100 text-violet-700"><Check className="size-3" /></span>{benefit}</div>)}</div></div></section><section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24"><header className="flex items-center justify-between lg:justify-end"><div className="lg:hidden"><Brand /></div><p className="text-sm text-slate-500">{isSignup ? 'Already have an account?' : 'New to TaskFlow?'} <button onClick={() => setMode(isSignup ? 'login' : 'signup')} className="font-semibold text-violet-700 hover:text-violet-900">{isSignup ? 'Sign in' : 'Create account'}</button></p></header><div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-12"><div className="mb-8"><div className="mb-5 inline-flex size-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700"><Sparkles className="size-5" /></div><h2 className="text-3xl font-bold tracking-[-0.04em]">{isSignup ? 'Create your account' : 'Welcome back'}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{isSignup ? 'Start organizing your team’s best work today.' : 'Sign in to pick up where you left off.'}</p></div><div className="grid grid-cols-2 gap-3"><button className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-medium shadow-sm"><span className="font-bold">G</span> Google</button><button className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-medium shadow-sm"><span className="text-base font-bold"></span> Apple</button></div><div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-wider text-slate-400"><span className="h-px flex-1 bg-slate-200" />or continue with email<span className="h-px flex-1 bg-slate-200" /></div><form onSubmit={(event) => { event.preventDefault(); setIsAuthenticated(true) }} className="flex flex-col gap-4">{isSignup && <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">Full name<input required placeholder="Alex Morgan" className="h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10" /></label>}<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">Work email<div className="relative"><Mail className="pointer-events-none absolute left-3.5 top-3 size-4 text-slate-400" /><input required type="email" placeholder="you@company.com" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3.5 text-sm font-normal outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10" /></div></label><label className="flex flex-col gap-2 text-sm font-medium text-slate-700">Password<div className="relative"><LockKeyhole className="pointer-events-none absolute left-3.5 top-3 size-4 text-slate-400" /><input required minLength={8} type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm font-normal outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 rounded-md p-1 text-slate-400 hover:text-slate-700">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></label>{isSignup && <label className="flex items-start gap-2 text-xs leading-5 text-slate-500"><input required type="checkbox" className="mt-1 accent-violet-600" />I agree to the Terms of Service and Privacy Policy.</label>}<button type="submit" className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-[#6753d6] text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:bg-[#5744c2]">{isSignup ? 'Create account' : 'Sign in'}<ArrowRight className="size-4" /></button></form><p className="mt-10 text-center text-xs leading-5 text-slate-400">By continuing, you agree to TaskFlow&apos;s Terms and acknowledge the Privacy Policy.</p></div><footer className="flex justify-between text-xs text-slate-400"><span>© 2026 TaskFlow</span><span>Support · Privacy</span></footer></section></main>
-}
+export default function Page() { const [mode, setMode] = useState<AuthMode>('login'); const [showPassword, setShowPassword] = useState(false); const [isAuthenticated, setIsAuthenticated] = useState(false); const isSignup = mode === 'signup'; if (isAuthenticated) return <Dashboard onLogout={() => setIsAuthenticated(false)} />; return <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(300px,0.72fr)_minmax(560px,1.28fr)]"><section className="relative hidden overflow-hidden border-r border-slate-200 bg-slate-50 px-8 py-8 lg:flex lg:flex-col xl:px-12"><div className="relative"><Brand /></div><div className="relative mt-auto max-w-lg pb-12"><p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-violet-700">Your workspace, in rhythm</p><h1 className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] xl:text-6xl">Plan clearly. Ship confidently.</h1><p className="mt-6 max-w-md text-base leading-7 text-slate-500">TaskFlow gives your team one calm, focused place to manage projects, collaborate, and finish strong.</p><div className="mt-10 flex flex-col gap-4">{benefits.map((benefit) => <div key={benefit} className="flex items-center gap-3 text-sm text-slate-600"><span className="flex size-5 items-center justify-center rounded-full bg-violet-100 text-violet-700"><Check className="size-3" /></span>{benefit}</div>)}</div></div></section><section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-16 xl:px-24"><header className="flex items-center justify-between lg:justify-end"><div className="lg:hidden"><Brand /></div><p className="text-sm text-slate-500">{isSignup ? 'Already have an account?' : 'New to TaskFlow?'} <button onClick={() => setMode(isSignup ? 'login' : 'signup')} className="font-semibold text-violet-700">{isSignup ? 'Sign in' : 'Create account'}</button></p></header><div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-12"><div className="mb-8"><div className="mb-5 inline-flex size-11 items-center justify-center rounded-2xl bg-violet-600 text-white"><LockKeyhole className="size-5" /></div><h2 className="text-3xl font-bold tracking-tight">{isSignup ? 'Create your account' : 'Welcome back'}</h2><p className="mt-3 text-sm leading-6 text-slate-500">{isSignup ? 'Set up your workspace and start moving work forward.' : 'Sign in to pick up where you left off.'}</p></div><form onSubmit={(event) => { event.preventDefault(); setIsAuthenticated(true) }} className="flex flex-col gap-4"><label className="text-xs font-semibold text-slate-600">Work email<input required type="email" placeholder="you@company.com" className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-violet-500" /></label><label className="text-xs font-semibold text-slate-600">Password<div className="relative mt-2"><input required minLength={6} type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="h-11 w-full rounded-lg border border-slate-200 px-3 pr-10 text-sm outline-none focus:border-violet-500" /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400"><Mail className="size-4" /></button></div></label>{isSignup && <label className="flex items-start gap-2 text-xs text-slate-500"><input required type="checkbox" className="mt-0.5 accent-violet-600" />I agree to the TaskFlow terms and privacy policy.</label>}<button className="mt-2 flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-900 text-sm font-semibold text-white hover:bg-slate-700">{isSignup ? 'Create account' : 'Sign in'}<ArrowRight className="size-4" /></button></form><div className="mt-8 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />Secure workspace access<span className="h-px flex-1 bg-slate-200" /></div></div></section></main> }
