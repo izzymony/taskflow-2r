@@ -5,6 +5,7 @@ import { Check, FileText, MessageSquare, MoreHorizontal, Plus, Send, Sparkles, U
 import { PageHeader, TaskflowShell } from './taskflow-shell'
 
 const pageData: Record<string, { eyebrow: string; title: string; description: string; items: string[] }> = {
+  '/': { eyebrow: 'OVERVIEW', title: 'Your work, simplified.', description: 'Here’s what’s happening across your workspace today.', items: ['Prepare Q4 product roadmap', 'Review campaign performance', 'Send weekly team update'] },
   '/workflows': { eyebrow: 'OPERATIONS', title: 'Workflows', description: 'Build repeatable processes your team can trust.', items: ['Client onboarding', 'Weekly content review', 'Invoice approval'] },
   '/automations': { eyebrow: 'AUTOMATE', title: 'Automations', description: 'Let routine work happen in the background.', items: ['Send reminder when a task is overdue', 'Create a follow-up after a client call', 'Notify the team when a payment lands'] },
   '/schedule': { eyebrow: 'PLANNING', title: 'Schedule', description: 'See meetings, deadlines, and focus time in one place.', items: ['Design critique · 10:00 AM', 'Client check-in · 1:30 PM', 'Focus time · 3:00 PM'] },
