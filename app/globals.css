@@ -175,4 +175,6 @@
 .status-pill { @apply rounded-full px-2.5 py-1 text-[10px] font-semibold; } .status-blue { @apply bg-[#edf3ff] text-[#4e7cff]; } .status-muted { @apply bg-[#f4f6f9] text-[#8b96a9]; }
 .progress-ring { @apply flex size-40 items-center justify-center rounded-full; background: conic-gradient(#ff646b 0 67%, #edf0f5 67% 100%); } .progress-ring > div { @apply flex size-[124px] flex-col items-center justify-center rounded-full bg-white; } .progress-ring strong { @apply text-3xl font-bold; } .progress-ring span { @apply mt-1 text-xs text-[#8b96a9]; }
 .completed-card { @apply flex items-center gap-3 rounded-xl border border-[#edf0f5] p-4; } .check-circle { @apply flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eafaf3] text-[#25a66a]; }
+.field { @apply flex h-12 items-center gap-3 rounded-xl border border-[#e5e9f1] px-4 text-[#8b96a9] transition focus-within:border-[#ff646b] focus-within:ring-4 focus-within:ring-[#ff646b]/10; }
+.field input { @apply min-w-0 flex-1 bg-transparent text-sm text-[#172033] outline-none; }
 
