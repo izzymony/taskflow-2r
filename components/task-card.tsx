@@ -17,7 +17,7 @@
 const tagColors: Record<string, string> = {
   Web: 'bg-sky-50 text-sky-600',
   SaaS: 'bg-amber-50 text-amber-600',
-  Mobile: 'bg-fuchsia-50 text-fuchsia-600',
+  Mobile: 'bg-fuchsia-50 text-fuchsia-6000 text-800',
 }
 
 function getTagColor(tag: string): string {
