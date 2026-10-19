@@ -1,0 +1,36 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+import { ArrowRight, LockKeyhole, Mail, UserRound } from 'lucide-react'
+
+export function AuthPage({ mode }: { mode: 'signin' | 'signup' })
+ { const [submitted, setSubmitted] = useState(false); const signup = mode === 'signup'; 
+    return <main className="flex min-h-screen items-center justify-center bg-[#f6f8fc] p-5">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl shadow-[#172033]/10 lg:grid-cols-2">
+        <div className="hidden bg-[#172033] p-12 text-white lg:block"><Link href="/" className="text-2xl font-bold">
+        <span className="text-[#ff8b88]">task</span>flow</Link>
+        <div className="mt-32"><p className="mb-4 text-sm font-medium text-[#ff8b88]">WORK, SIMPLIFIED</p>
+        <h1 className="text-4xl font-bold leading-tight">Bring your best work together.</h1>
+        <p className="mt-5 max-w-sm text-sm leading-7 text-[#aeb9cc]">Tasks, clients, conversations, and company knowledge in one calm workspace.</p>
+        </div>
+        </div>
+        <div className="p-7 sm:p-12"><Link href="/" className="text-xl font-bold lg:hidden"><span className="text-[#ff646b]">task</span>flow</Link>
+        <div className="mt-10 lg:mt-16"><h2 className="text-3xl font-bold">{signup ? 'Create your account' : 'Welcome back'}</h2>
+        <p className="mt-2 text-sm text-[#8b96a9]">{signup ? 'Start organizing your work today.' : 'Sign in to continue to your workspace.'}</p>{submitted ? <div className="mt-10 rounded-2xl bg-[#eafaf3] p-5 text-sm text-[#248357]">This frontend form is ready to connect to your authentication endpoint.</div> : 
+        <form onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }} className="mt-8 space-y-4">{signup && 
+        <label className="field"><UserRound className="size-4" />
+        <input required placeholder="Full name" /></label>}
+        <label className="field"><Mail className="size-4" />
+        <input required type="email" placeholder="Email address" />
+        </label>
+        <label className="field"><LockKeyhole className="size-4" />
+        <input required type="password" placeholder="Password" />
+        </label>
+        <button className="primary-button mt-3 w-full justify-center">{signup ? 'Create account' : 'Sign in'}<ArrowRight className="size-4" /></button>
+        </form>}
+        <p className="mt-8 text-center text-sm text-[#8b96a9]">{signup ? 'Already have an account?' : 'New to taskflow?'} <Link href={signup ? '/signin' : '/signup'} className="font-semibold text-[#ff646b]">{signup ? 'Sign in' : 'Create an account'}</Link></p>
+        </div>
+        </div>
+        </div>
+        </main> }
