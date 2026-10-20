@@ -3,8 +3,9 @@ import crypto from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index";
 import { users, refreshTokens } from "../db/schema";
+import { env } from "../config/env";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback_super_secret_key_32_chars_long");
+const JWT_SECRET = new TextEncoder().encode(env.jwtSecret);
 
 export interface SessionPayload {
   userId: number;

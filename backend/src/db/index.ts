@@ -1,25 +1,23 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { relations } from "./schema"
-import { sql} from "drizzle-orm";
+import { relations } from "./schema";
+import { env } from "../config/env";
 
-const rawUrl = process.env.DATABASE_URL?.trim();
-let connectionString = rawUrl || "mysql://root:Israel21@localhost:3307/taskflow";
+const rawUrl = env.databaseUrl;
+let connectionString = rawUrl;
 let sslConfig: any = false;
 
-if (rawUrl) {
-  try {
-    const databaseUrl = new URL(rawUrl);
-    const sslMode = databaseUrl.searchParams.get("ssl-mode")?.toUpperCase();
-    databaseUrl.searchParams.delete("ssl-mode");
-    
-    if (sslMode === "REQUIRED") {
-      sslConfig = { rejectUnauthorized: false };
-    }
-    connectionString = databaseUrl.toString();
-  } catch (error) {
-    sslConfig = rawUrl.includes("ssl-mode=REQUIRED") ? { rejectUnauthorized: false } : false;
+try {
+  const databaseUrl = new URL(rawUrl);
+  const sslMode = databaseUrl.searchParams.get("ssl-mode")?.toUpperCase();
+  databaseUrl.searchParams.delete("ssl-mode");
+
+  if (sslMode === "REQUIRED") {
+    sslConfig = { rejectUnauthorized: false };
   }
+  connectionString = databaseUrl.toString();
+} catch (error) {
+  sslConfig = rawUrl.includes("ssl-mode=REQUIRED") ? { rejectUnauthorized: false } : false;
 }
 
 const pool = mysql.createPool({
@@ -34,19 +32,9 @@ const pool = mysql.createPool({
   bigNumberStrings: true,
 });
 
-// 💡 WORKAROUND FOR 1.0.0-RC.4 BUG: 
+// 💡 WORKAROUND FOR 1.0.0-RC.4 BUG:
 // Pass 'pool.pool' as the client so Drizzle's internal framework can find the '.config' property!
 export const db = drizzle({
   client: (pool as any).pool ?? pool,
-  relations: relations, 
+  relations: relations,
 });
-
-
-
-/* const result = await db.execute(sql`
-  SELECT
-    DATABASE() AS database_name,
-    @@hostname AS database_host,
-    @@session.time_zone AS session_timezone
-`); */
-
