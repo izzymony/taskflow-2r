@@ -126,3 +126,33 @@ From the repository root:
 
 `.github/workflows/ci.yml` installs and type-checks both packages on every push and
 pull request.
+
+## Deploying the frontend to Vercel
+
+The Next.js app lives in `frontend/`, so the Vercel project must point at it.
+
+**Project Settings → General → Build & Deployment Settings**
+
+| Setting        | Value                    |
+| -------------- | ------------------------ |
+| Root Directory | `frontend`               |
+| Install Command| `pnpm install --frozen-lockfile` |
+| Build Command  | `pnpm build`             |
+| Output Directory | `.next`                |
+
+`frontend/vercel.json` already pins the framework and those commands, so only
+**Root Directory** has to be set in the dashboard.
+
+Add the API base URL as a production environment variable in the same settings:
+
+```
+NEXT_PUBLIC_API_URL=https://your-api.example.com
+```
+
+It is inlined into the client bundle at build time, so redeploy after changing it.
+The `backend/` folder is not built by Vercel — deploy the API separately (Railway,
+Render, Fly, or your own host) and point `NEXT_PUBLIC_API_URL` at it.
+
+If the project is left with the Root Directory on the repository root, the build
+fails with an explicit message from the root `vercel.json` instead of a confusing
+`NEXT_NO_VERSION` error.

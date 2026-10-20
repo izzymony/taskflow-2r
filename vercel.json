@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'Taskflow: the Next.js app lives in /frontend. In Vercel set Project Settings > Build & Deployment Settings > Root Directory to \"frontend\", then redeploy. To build from the repo root instead, delete this vercel.json and move the frontend files to the root.' && exit 1"
+}
