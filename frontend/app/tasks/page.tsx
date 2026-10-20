@@ -188,12 +188,14 @@ export default function TasksPage() {
                 Filters
               </Button>
               <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-                <Dialog.Trigger asChild>
-                  <Button size="sm">
-                    <Plus className="size-3" />
-                    New Task
-                  </Button>
-                </Dialog.Trigger>
+                <Dialog.Trigger
+                  render={
+                    <Button size="sm">
+                      <Plus className="size-3" />
+                      New Task
+                    </Button>
+                  }
+                />
                 <Dialog.Portal>
                   <Dialog.Backdrop className="fixed inset-0 bg-black/20" />
                   <Dialog.Popup className="fixed left-1/2 top-1/2 w-[min(90vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
