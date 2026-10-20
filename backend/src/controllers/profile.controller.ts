@@ -4,7 +4,7 @@ import { fetchUserProfileById } from "../services/profile.service";
 
 export async function getUsers(req: Request, res: Response, next: NextFunction){
     try{
-        const userId = res.locals.user?.id;
+        const userId = res.locals.user?.userId;
 
         if(!userId){
             return res.status(401).json({success: false, message: "Not authenticated"});

@@ -21,7 +21,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
 export async function getTasks(req: Request, res: Response, next: NextFunction) {
     try {
-        const userId = res.locals.user?.id;
+        const userId = res.locals.user?.userId;
         const tasks = await getTasksService(userId);
         return res.status(200).json({ success: true, data: tasks });
     } catch (error) {
