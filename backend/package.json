@@ -15,6 +15,7 @@
     "build": "echo 'No build step required for backend'"
   },
   "dependencies": {
+    "@tidbcloud/serverless": "^0.3.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.8",

@@ -1,17 +1,32 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { relations } from "./schema";
-import { env } from "../config/env";
+import { relations } from "../db/schema"; // Verify your folder path is correct
+import { sql} from "drizzle-orm";
+import {env} from "../configenv/env"
 
-const config = env.database;
+
+const rawUrl = env.DATABASE_URL?.trim();
+let connectionString = rawUrl;
+let sslConfig: any = false;
+
+if (rawUrl) {
+  try {
+    const databaseUrl = new URL(rawUrl);
+    const sslMode = databaseUrl.searchParams.get("ssl-mode")?.toUpperCase();
+    databaseUrl.searchParams.delete("ssl-mode");
+    
+    if (sslMode === "REQUIRED") {
+      sslConfig = { rejectUnauthorized: false };
+    }
+    connectionString = databaseUrl.toString();
+  } catch (error) {
+    sslConfig = rawUrl.includes("ssl-mode=REQUIRED") ? { rejectUnauthorized: false } : false;
+  }
+}
 
 const pool = mysql.createPool({
-  host: config.host,
-  port: config.port,
-  user: config.user,
-  password: config.password,
-  database: config.database,
-  ssl: config.ssl,
+  uri: connectionString,
+  ssl: sslConfig,
   waitForConnections: true,
   connectionLimit: 10,
   maxIdle: 10,
@@ -21,13 +36,20 @@ const pool = mysql.createPool({
   bigNumberStrings: true,
 });
 
-// 💡 WORKAROUND FOR 1.0.0-RC.4 BUG:
+
+
+// 💡 WORKAROUND FOR 1.0.0-RC.4 BUG: 
 // Pass 'pool.pool' as the client so Drizzle's internal framework can find the '.config' property!
 export const db = drizzle({
   client: (pool as any).pool ?? pool,
   relations: relations,
 });
 
-export async function verifyConnection(): Promise<void> {
-  await pool.query("SELECT 1");
-}
+const result = await db.execute(sql`
+  SELECT
+    DATABASE() AS database_name,
+    @@hostname AS database_host,
+    @@session.time_zone AS session_timezone
+`);
+
+console.log(result);

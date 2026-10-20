@@ -1,23 +1,22 @@
-import { defineConfig } from "drizzle-kit";
-import { config as loadEnv } from "dotenv";
-import { parseDatabaseUrl, toMysqlUrl } from "./src/config/database";
+import { defineConfig } from 'drizzle-kit';
 
-// .env holds the shared/production settings, .env.local the local overrides.
-// An explicit `bun --env-file=...` wins, so only fall back to loading the files
-// when DATABASE_URL has not been provided by the environment.
+// ⚠️ REMOVED: import 'dotenv/config'; 
+// This prevents the dotenv package from overwriting Bun's native --env-file selection flags.
+
 if (!process.env.DATABASE_URL) {
-  loadEnv({ path: ".env" });
-  loadEnv({ path: ".env.local", override: true });
+  throw new Error(
+    "❌ Critical Error: DATABASE_URL is missing. " +
+    "Ensure you are passing the correct file, e.g., 'bun --env-file=.env drizzle-kit push'"
+  );
 }
 
-const database = parseDatabaseUrl(process.env.DATABASE_URL ?? "");
-
 export default defineConfig({
-  dialect: "mysql",
-  schema: "./src/db/schema.ts",
-  out: "./drizzle",
+  dialect: 'mysql',
+  schema: './src/db/schema.ts',
+  out: './drizzle',
   dbCredentials: {
-    url: toMysqlUrl(database),
-    ...(database.ssl ? { ssl: database.ssl } : {}),
+    url: process.env.DATABASE_URL,
+    // Forces the Drizzle Kit CLI binary to connect using strict secure TLS
+    ssl: 'Amazon RDS', 
   },
 });
