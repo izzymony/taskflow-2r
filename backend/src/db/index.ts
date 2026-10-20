@@ -3,26 +3,15 @@ import mysql from "mysql2/promise";
 import { relations } from "./schema";
 import { env } from "../config/env";
 
-const rawUrl = env.databaseUrl;
-let connectionString = rawUrl;
-let sslConfig: any = false;
-
-try {
-  const databaseUrl = new URL(rawUrl);
-  const sslMode = databaseUrl.searchParams.get("ssl-mode")?.toUpperCase();
-  databaseUrl.searchParams.delete("ssl-mode");
-
-  if (sslMode === "REQUIRED") {
-    sslConfig = { rejectUnauthorized: false };
-  }
-  connectionString = databaseUrl.toString();
-} catch (error) {
-  sslConfig = rawUrl.includes("ssl-mode=REQUIRED") ? { rejectUnauthorized: false } : false;
-}
+const config = env.database;
 
 const pool = mysql.createPool({
-  uri: connectionString,
-  ssl: sslConfig,
+  host: config.host,
+  port: config.port,
+  user: config.user,
+  password: config.password,
+  database: config.database,
+  ssl: config.ssl,
   waitForConnections: true,
   connectionLimit: 10,
   maxIdle: 10,
@@ -38,3 +27,7 @@ export const db = drizzle({
   client: (pool as any).pool ?? pool,
   relations: relations,
 });
+
+export async function verifyConnection(): Promise<void> {
+  await pool.query("SELECT 1");
+}

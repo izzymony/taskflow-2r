@@ -39,9 +39,34 @@ required — the server refuses to boot without them.
 | `bun run dev`       | Start the API with hot reload                   |
 | `bun run start`     | Start the API in production mode                |
 | `bun run typecheck` | Type-check the project with `tsc --noEmit`      |
+| `bun run db:check`  | Show the parsed connection target and test it   |
 | `bun run db:generate` | Generate a migration from the Drizzle schema  |
-| `bun run db:push`   | Push the schema straight to the database        |
+| `bun run db:push`   | Push the schema to the local database           |
+| `bun run db:push:live` | Push the schema to the database in `.env`    |
 | `bun run db:studio` | Open Drizzle Studio                            |
+
+## Database connection
+
+`DATABASE_URL` accepts both formats:
+
+```
+mysql://user:password@host:3306/database
+jdbc:mysql://user:password@host:4000/database?ssl-mode=REQUIRED
+```
+
+The `jdbc:` prefix (TiDB Cloud, JDBC) is normalised away, and `ssl-mode` is turned
+into the driver's TLS option instead of being passed through as an unknown
+connection option. `src/config/database.ts` owns that parsing and validates the
+result, so a malformed URL fails immediately with a readable message.
+
+Check what the API resolves to, and that it can reach the server:
+
+```bash
+bun run db:check                      # uses .env.local
+bun --env-file=.env scripts/check-db.ts   # uses the live database
+```
+
+The script prints the target (never the password) and whether the connection works.
 
 ## Environment variables
 

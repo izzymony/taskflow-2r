@@ -5,6 +5,7 @@ import tasksRouter from "./routes/tasks.route";
 import profileRouter from "./routes/profile.routes";
 import { errorHandler } from "./middleware/error-handlers";
 import { env } from "./config/env";
+import { verifyConnection } from "./db";
 
 const app: Express = express();
 
@@ -47,3 +48,7 @@ app.use(errorHandler);
 app.listen(env.port, () => {
   console.log(`⚡ [server]: Blueprint engine processing securely on port ${env.port}`);
 });
+
+verifyConnection()
+  .then(() => console.log(`🗄️ [database]: connected to ${env.database.host}/${env.database.database}`))
+  .catch((error) => console.error(`🗄️ [database]: connection failed — ${error.message}`));
