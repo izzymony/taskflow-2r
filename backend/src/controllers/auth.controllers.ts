@@ -4,6 +4,17 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/index";
 import { users } from "../db/schema";
 import { createAccessToken, createRefreshToken } from "../services/auth.services";
+import { env } from "../config/env";
+
+// The frontend and the API are served from different sites (e.g. app.vercel.app
+// and api.onrender.com). Browsers only attach such cookies when the request is
+// cross-site AND the cookie opts into it via SameSite=None; Secure.
+const cookieOptions = {
+  httpOnly: true,
+  secure: env.cookieSameSite === "none" || env.isProduction,
+  sameSite: env.cookieSameSite,
+  path: "/",
+};
 
 export async function registerHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -21,15 +32,11 @@ export async function registerHandler(req: Request, res: Response, next: NextFun
     const refreshToken = await createRefreshToken(userId);
 
     res.cookie("access_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
     res.cookie("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -67,16 +74,12 @@ export async function loginHandler(req: Request, res: Response, next: NextFuncti
 
     // 4. Attach tokens inside secure HttpOnly cookie containers
     res.cookie("access_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000, // 15 minutes match
     });
 
     res.cookie("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 

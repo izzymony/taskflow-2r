@@ -1,2 +1,5 @@
-import { AuthPage } from '@/components/auth-pages'
-export default function Page() { return <AuthPage mode="signup" /> }
+import { SignUpForm } from '@/components/signup-form'
+
+export default function SignUpPage() {
+  return <SignUpForm />
+}

@@ -18,6 +18,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else if (origin) {
+    console.warn(
+      `[cors] Rejected origin "${origin}". Allowed: ${env.allowedOrigins.join(", ")}`,
+    );
   }
 
   res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
