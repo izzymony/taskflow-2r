@@ -1,2 +1,2 @@
-import { WorkspacePage } from '@/components/workspace-pages'
-export default function Page() { return <WorkspacePage type="/clients" /> }
+import { ClientsPage } from '@/components/workspace-route-pages'
+export default function Page() { return <ClientsPage /> }

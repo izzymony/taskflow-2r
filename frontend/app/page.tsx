@@ -1,5 +1,5 @@
-import { WorkspacePage } from '@/components/workspace-pages'
+import { OverviewPage } from '@/components/workspace-route-pages'
 
 export default function Home() {
-  return <WorkspacePage type="/" />
+  return <OverviewPage />
 }
