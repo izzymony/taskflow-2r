@@ -1,10 +1,8 @@
 'use client'
 
 import { Bell, ChevronDown, Menu, X } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { Brand } from '@/components/ui/brand'
-import { getProfile } from '@/lib/api/auth'
-import type { UserProfile } from '@/lib/types/api'
+import { useProfile } from '@/hooks/use-profile'
 
 
 function DashboardHeader({
@@ -15,26 +13,7 @@ function DashboardHeader({
   isMobileMenuOpen?: boolean
 }) {
 
-  const fetchProfile = useQuery<UserProfile>({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const payload = await getProfile()
-      if (!payload.data) {
-        throw new Error('Profile payload was empty')
-      }
-      return payload.data
-    },
-  })
-
-  const fullname = fetchProfile.data?.fullname
-  const initials = fullname
-    ? fullname
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('')
-    : ''
+  const { fullname, initials } = useProfile()
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-100 px-5 sm:px-8">

@@ -1,14 +1,30 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { verifyAccessToken } from "../services/auth.services";
-import { type ZodSchema } from "zod";
+import { ZodError, type ZodSchema } from "zod";
 
 export function validate(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       schema.parse({ body: req.body, params: req.params, query: req.query });
       next();
-    } catch (err: any) {
-      return res.status(400).json({ success: false, message: err.errors?.[0]?.message || "Validation error" });
+    } catch (error) {
+      if (!(error instanceof ZodError)) {
+        return next(error);
+      }
+
+      const errors = error.issues.map((issue) => ({
+        path: issue.path.map(String).join("."),
+        message: issue.message,
+      }));
+      const message = errors
+        .map(({ path, message }) => (path ? `${path}: ${message}` : message))
+        .join("; ");
+
+      return res.status(400).json({
+        success: false,
+        message: message || "Validation error",
+        errors,
+      });
     }
   };
 }

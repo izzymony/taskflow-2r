@@ -2,6 +2,8 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.route";
 import tasksRouter from "./routes/tasks.route";
+import clientRouter from "./routes/client.routes";
+import clientTasksRouter from "./routes/client_tasks.route";
 import profileRouter from "./routes/profile.routes";
 import { errorHandler } from "./middleware/error-handlers";
 import { env } from "./config/env";
@@ -38,6 +40,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use("/api/auth", authRouter);
 app.use("/api", profileRouter);
 app.use("/api/tasks", tasksRouter);
+app.use("/api/clients", clientRouter);
+app.use("/api/client-tasks", clientTasksRouter);
 
 const health = (req: Request, res: Response) => {
   res.json({ success: true, status: "ok" });
