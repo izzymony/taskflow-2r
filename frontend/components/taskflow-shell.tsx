@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Bell, CalendarDays, CircleHelp, CreditCard, FileText, FolderOpen, LayoutDashboard, LogOut, Menu, MessageSquare, Settings, Sparkles, Users, Workflow, X } from 'lucide-react'
+import { Bell, CalendarDays, CircleHelp, CreditCard, FileText, FolderKanban, FolderOpen, LayoutDashboard, LogOut, Menu, MessageSquare, Settings, Sparkles, Users, Workflow, X } from 'lucide-react'
+import { useProfile } from '@/hooks/use-profile'
 
 const navigation = [
   { label: 'Overview', href: '/', icon: LayoutDashboard },
@@ -12,6 +13,7 @@ const navigation = [
   { label: 'Automations', href: '/automations', icon: Sparkles },
   { label: 'Schedule', href: '/schedule', icon: CalendarDays },
   { label: 'Clients', href: '/clients', icon: Users },
+  { label: 'Client Tasks', href: '/client-tasks', icon: FolderKanban },
   { label: 'Files', href: '/files', icon: FolderOpen },
   { label: 'Docs', href: '/docs', icon: FileText },
   { label: 'Users management', href: '/users-management', icon: Users },
@@ -21,15 +23,16 @@ const navigation = [
 export function TaskflowShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { fullname, firstName, initials } = useProfile()
 
   const sidebar = (
     <>
       <div className="mb-7 rounded-2xl bg-[#172033] p-5 text-white shadow-xl shadow-[#172033]/10">
         <div className="mb-5 flex items-center justify-between">
-          <div className="avatar bg-[#ff8b88] text-white">AM</div>
+          <div className="avatar bg-[#ff8b88] text-white">{initials || 'AM'}</div>
           <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-medium text-[#bfc8d8]">PRO</span>
         </div>
-        <p className="font-semibold">Good morning, Amanuel</p>
+        <p className="font-semibold">Good morning, {firstName || 'there'}</p>
         <p className="mt-1 text-xs text-[#aeb9cc]">Let&apos;s make today productive.</p>
       </div>
       <nav className="space-y-1" aria-label="Main navigation">
@@ -76,8 +79,8 @@ export function TaskflowShell({ children }: { children: React.ReactNode }) {
           <button aria-label="Notifications" className="icon-button"><Bell className="size-[18px]" /></button>
           <button aria-label="Calendar" className="icon-button"><CalendarDays className="size-[18px]" /></button>
           <div className="hidden items-center gap-3 border-l border-[#edf0f5] pl-5 sm:flex">
-            <div className="avatar bg-[#dbe8ff]">AM</div>
-            <div className="hidden text-left lg:block"><p className="text-sm font-semibold">Amanuel</p><p className="text-xs text-[#8b96a9]">Workspace admin</p></div>
+            <div className="avatar bg-[#dbe8ff]">{initials || 'AM'}</div>
+            <div className="hidden text-left lg:block"><p className="text-sm font-semibold">{fullname || 'Guest'}</p><p className="text-xs text-[#8b96a9]">Workspace admin</p></div>
           </div>
         </div>
       </div>

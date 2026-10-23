@@ -175,6 +175,11 @@
 .task-card { @apply flex gap-3 rounded-xl border border-[#edf0f5] p-4 transition hover:border-[#ffb9bb] hover:shadow-md; }
 .task-dot { @apply mt-1.5 size-2.5 shrink-0 rounded-full ring-4; } .task-dot.blue { @apply bg-[#4e7cff] ring-[#edf3ff]; } .task-dot.coral { @apply bg-[#ff646b] ring-[#fff0f0]; } .task-dot.purple { @apply bg-[#9a7aff] ring-[#f2efff]; }
 .status-pill { @apply rounded-full px-2.5 py-1 text-[10px] font-semibold; } .status-blue { @apply bg-[#edf3ff] text-[#4e7cff]; } .status-muted { @apply bg-[#f4f6f9] text-[#8b96a9]; }
+.status-amber { @apply bg-[#fff6e5] text-[#d98a12]; } .status-purple { @apply bg-[#f2efff] text-[#7d5cf0]; } .status-green { @apply bg-[#eafaf3] text-[#25a66a]; }
+.status-red { @apply bg-[#fff0f0] text-[#ff646b]; }
+.skeleton { @apply animate-pulse bg-[#edf0f5]; }
+.priority-pill { @apply rounded-full px-2.5 py-1 text-[10px] font-semibold; } .priority-low { @apply bg-[#f4f6f9] text-[#8b96a9]; } .priority-medium { @apply bg-[#edf3ff] text-[#4e7cff]; } .priority-high { @apply bg-[#fff6e5] text-[#d98a12]; } .priority-critical { @apply bg-[#fff0f0] text-[#ff646b]; }
+.tag-chip { @apply rounded-md px-2 py-0.5 text-[10px] font-medium; }
 .progress-ring { @apply flex size-40 items-center justify-center rounded-full; background: conic-gradient(#ff646b 0 67%, #edf0f5 67% 100%); } .progress-ring > div { @apply flex size-[124px] flex-col items-center justify-center rounded-full bg-white; } .progress-ring strong { @apply text-3xl font-bold; } .progress-ring span { @apply mt-1 text-xs text-[#8b96a9]; }
 .completed-card { @apply flex items-center gap-3 rounded-xl border border-[#edf0f5] p-4; } .check-circle { @apply flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eafaf3] text-[#25a66a]; }
 .field { @apply flex h-12 items-center gap-3 rounded-xl border border-[#e5e9f1] px-4 text-[#8b96a9] transition focus-within:border-[#ff646b] focus-within:ring-4 focus-within:ring-[#ff646b]/10; }
