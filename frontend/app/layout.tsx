@@ -43,9 +43,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased" suppressHydrationWarning>
         <Providers>
-
-       
-        {children}
+          {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
          </Providers>
       </body>
