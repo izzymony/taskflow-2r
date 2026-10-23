@@ -1,5 +1,11 @@
-import { OverviewPage } from '@/components/workspace-route-pages'
+import { OverviewPage } from '@/components/pages/overview-page';
+import { parsePreviewState } from '@/lib/preview';
 
-export default function Home() {
-  return <OverviewPage />
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  return <OverviewPage preview={parsePreviewState(params.state)} />;
 }

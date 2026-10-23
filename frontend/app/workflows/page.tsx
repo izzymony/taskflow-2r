@@ -1,2 +1,11 @@
-import { WorkflowsPage } from '@/components/workspace-route-pages'
-export default function Page() { return <WorkflowsPage /> }
+import { WorkflowsPage } from '@/components/pages/workflows-page';
+import { parsePreviewState } from '@/lib/preview';
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  return <WorkflowsPage preview={parsePreviewState(params.state)} />;
+}
