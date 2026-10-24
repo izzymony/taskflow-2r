@@ -158,9 +158,9 @@
   body { @apply bg-background text-foreground; }
 }
 
-.icon-button { @apply flex size-10 items-center justify-center rounded-xl bg-[#fff0f0] text-[#ff646b] transition hover:bg-[#ff646b] hover:text-white; }
+.icon-button { @apply flex size-10 items-center justify-center rounded-xl bg-[#fff0f0] text-[#ff646b] transition hover:bg-[#ff646b] hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#ff646b]/15; }
 .avatar { @apply flex size-10 items-center justify-center rounded-full text-xs font-bold text-[#172033]; }
-.side-link { @apply flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-[#8b96a9] transition hover:bg-[#f6f8fc] hover:text-[#172033]; }
+.side-link { @apply flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-[#8b96a9] transition hover:bg-[#f6f8fc] hover:text-[#172033] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#ff646b]/15; }
 .side-link-active { @apply bg-[#fff0f0] text-[#ff646b] hover:bg-[#fff0f0] hover:text-[#ff646b]; }
 .sidebar-scroll { scrollbar-width: none; -ms-overflow-style: none; }
 .sidebar-scroll::-webkit-scrollbar { display: none; }
