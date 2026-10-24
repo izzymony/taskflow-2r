@@ -341,7 +341,7 @@ export function ClientCard({
     Enterprise: 'status-purple',
   };
   return (
-    <div className="client-card group">
+    <article className="client-card group">
       <div className="client-avatar-ring">
         <div className="client-avatar-inner">
           {client.company.slice(0, 2).toUpperCase()}
@@ -398,6 +398,6 @@ export function ClientCard({
           </button>
         )}
       </div>
-    </div>
+    </article>
   );
 }
