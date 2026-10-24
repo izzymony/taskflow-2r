@@ -3,21 +3,39 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Bell, CalendarDays, CircleHelp, CreditCard, FileText, FolderKanban, FolderOpen, LayoutDashboard, LogOut, Menu, MessageSquare, Settings, Sparkles, Users, Workflow, X } from 'lucide-react'
+import { Bell, CalendarDays, CircleHelp, CreditCard, FileText, FolderKanban, FolderOpen, LayoutDashboard, LogOut, Menu, MessageSquare, Search, Settings, Sparkles, Users, Workflow, X } from 'lucide-react'
 import { useProfile } from '@/hooks/use-profile'
 
-const navigation = [
-  { label: 'Overview', href: '/', icon: LayoutDashboard },
-  { label: 'Chat', href: '/chat', icon: MessageSquare },
-  { label: 'Workflows', href: '/workflows', icon: Workflow },
-  { label: 'Automations', href: '/automations', icon: Sparkles },
-  { label: 'Schedule', href: '/schedule', icon: CalendarDays },
-  { label: 'Clients', href: '/clients', icon: Users },
-  { label: 'Client Tasks', href: '/client-tasks', icon: FolderKanban },
-  { label: 'Files', href: '/files', icon: FolderOpen },
-  { label: 'Docs', href: '/docs', icon: FileText },
-  { label: 'Users management', href: '/users-management', icon: Users },
-  { label: 'Payments', href: '/payments', icon: CreditCard },
+const navigationGroups = [
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'Overview', href: '/', icon: LayoutDashboard },
+      { label: 'Chat', href: '/chat', icon: MessageSquare },
+      { label: 'Schedule', href: '/schedule', icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'Work',
+    items: [
+      { label: 'Workflows', href: '/workflows', icon: Workflow },
+      { label: 'Automations', href: '/automations', icon: Sparkles },
+      { label: 'Client Tasks', href: '/client-tasks', icon: FolderKanban },
+    ],
+  },
+  {
+    label: 'Resources',
+    items: [
+      { label: 'Clients', href: '/clients', icon: Users },
+      { label: 'Files', href: '/files', icon: FolderOpen },
+      { label: 'Docs', href: '/docs', icon: FileText },
+      { label: 'Payments', href: '/payments', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [{ label: 'Users management', href: '/users-management', icon: Users }],
+  },
 ]
 
 export function TaskflowShell({ children }: { children: React.ReactNode }) {
@@ -35,17 +53,30 @@ export function TaskflowShell({ children }: { children: React.ReactNode }) {
         <p className="font-semibold">Good morning, {firstName || 'there'}</p>
         <p className="mt-1 text-xs text-[#aeb9cc]">Let&apos;s make today productive.</p>
       </div>
-      <nav className="space-y-1" aria-label="Main navigation">
-        {navigation.map(({ label, href, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={() => setMobileMenuOpen(false)}
-            aria-current={pathname === href ? 'page' : undefined}
-            className={`side-link ${pathname === href ? 'side-link-active' : ''}`}
-          >
-            <Icon className="size-[17px]" />{label}
-          </Link>
+      <nav className="space-y-6" aria-label="Main navigation">
+        {navigationGroups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-[#b6bfcd]">
+              {group.label}
+            </p>
+            <div className="space-y-1">
+              {group.items.map(({ label, href, icon: Icon }) => {
+                const active = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`))
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`side-link ${active ? 'side-link-active' : ''}`}
+                  >
+                    <Icon className="size-[17px]" />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
         ))}
       </nav>
       <div className="mt-auto space-y-1 pt-8">
@@ -73,7 +104,9 @@ export function TaskflowShell({ children }: { children: React.ReactNode }) {
           <span className="text-[#ff646b]">task</span><span>flow</span>
         </Link>
         <div className="relative hidden max-w-[610px] flex-1 md:block">
-          <input aria-label="Search workspace" placeholder="Search your workspace..." className="h-11 w-full rounded-xl border border-[#edf0f5] bg-[#f8faff] px-4 text-sm outline-none focus:border-[#ff646b] focus:ring-4 focus:ring-[#ff646b]/10" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a3adbc]" />
+          <input aria-label="Search workspace" placeholder="Search tasks, clients, docs..." className="h-11 w-full rounded-xl border border-[#edf0f5] bg-[#f8faff] pl-10 pr-16 text-sm outline-none transition focus:border-[#ff646b] focus:ring-4 focus:ring-[#ff646b]/10" />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-[#e5e9f1] bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#a3adbc] lg:block">⌘ K</kbd>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <button aria-label="Notifications" className="icon-button"><Bell className="size-[18px]" /></button>

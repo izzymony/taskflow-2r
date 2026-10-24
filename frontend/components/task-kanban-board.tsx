@@ -54,13 +54,13 @@ export function TaskKanbanBoard({
   };
 
   return (
-    <div role="board" aria-label="Task status board" className="flex flex-col md:flex-row lg:flex-nowrap gap-4 overflow-x-auto lg:overflow-x-auto">
+    <div role="board" aria-label="Task status board" className="task-board flex flex-col gap-4 overflow-x-auto pb-2 md:flex-row lg:flex-nowrap">
       {columns.map((column) => (
           <section
             key={column.status}
-            className="shrink-0 min-w-[280px] max-w-[360px] flex flex-col rounded-2xl border border-[#edf0f5] bg-white shadow-sm"
+            className="task-column flex min-h-[340px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#e8edf5] bg-[#fbfcff] shadow-[0_8px_28px_rgba(26,44,75,0.04)]"
           >
-          <div className="flex items-center justify-between rounded-t-xl border-b border-[#e5e9f1] bg-[#f8fafc] px-4 py-3">
+          <div className="flex items-center justify-between border-b border-[#e8edf5] bg-white/80 px-4 py-3.5 backdrop-blur-sm">
             <div>
               <h3 className={cn('flex items-center gap-1.5 font-bold text-sm tracking-tight uppercase tracking-wider text-[10px]', TASK_STATUS_TONE[column.status])}>
                 <span className="size-2 shrink-0 rounded-full" />
@@ -88,7 +88,7 @@ export function TaskKanbanBoard({
               </button>
             )}
           </div>
-          <div className="flex-1 min-h-[240px] flex flex-col p-3 space-y-2.5 overflow-y-auto">
+          <div className="task-column-list flex min-h-[260px] flex-1 flex-col gap-3 overflow-y-auto p-3">
             {column.tasks.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
                 <span className="inline-flex size-10 items-center justify-center rounded-full border border-dashed border-[#e5e9f1] bg-[#f8fafc] text-[#a3adbc] mb-2">
@@ -103,7 +103,7 @@ export function TaskKanbanBoard({
                   <article
                     key={String(task.id)}
                     className={cn(
-                      'relative group rounded-xl border border-[#edf0f5] bg-white p-3.5 transition-all hover:border-[#ffb9bb] hover:shadow-md',
+                      'task-card group relative rounded-xl border border-[#e8edf5] bg-white p-4 shadow-[0_2px_8px_rgba(26,44,75,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#ffb9bb] hover:shadow-[0_12px_28px_rgba(26,44,75,0.09)] focus-within:border-[#ff9da1]',
                       task.status === 'Completed' && 'bg-[#f8fafc]/50',
                     )}
                   >
