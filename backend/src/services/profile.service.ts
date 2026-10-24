@@ -26,7 +26,7 @@ export const clients = pgTable("clients", {
   userId: varchar("user_id", { length: 255 }).notNull(),
   plan: varchar("plan", { length: 50 }).notNull(),       // Starter, Growth, Enterprise
   status: varchar("status", { length: 50 }).notNull(),   // Active, Inactive, Pending
-  
+
   // --- NEW FINANCIAL / PRICING FIELDS ---
   billingType: varchar("billing_type", { length: 50 }).default("Hourly").notNull(), // Hourly, Retainer, Fixed_Project
   rate: numeric("rate", { precision: 10, scale: 2 }).default("0.00").notNull(),     // e.g., $150.00/hr or $3000/mo retainer
@@ -37,4 +37,3 @@ export const clients = pgTable("clients", {
   contactName: varchar("contact_name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-

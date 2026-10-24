@@ -3,6 +3,7 @@ import type { ApiResponse } from '@/lib/types/api';
 import type {
   ICreateTaskInput,
   ICreateClientTaskInput,
+  IClientTask,
   ITask,
   IUpdateTaskInput,
   TaskPriority,
@@ -96,4 +97,86 @@ export function deleteTask(id: ITask['id']) {
   return api
     .delete<ApiResponse<ITaskPayload>>(`/api/tasks/${id}`)
     .then((response) => ({ ...response, data: response.data ? toTask(response.data) : undefined }));
+}
+
+/** Client-tasks table payload (from the `client_tasks` table). */
+interface IClientTaskPayload {
+  id: string;
+  title: string;
+  description: string | null;
+  projectId: string;
+  clientId: string;
+  userId: number;
+  status: string;
+  billable: number;
+  estimatedHours: string | null;
+  assignedTo: string | null;
+  createdAt: string;
+}
+
+function toClientTask(payload: IClientTaskPayload): IClientTask {
+  return {
+    id: String(payload.id),
+    title: payload.title,
+    description: payload.description ?? '',
+    projectId: payload.projectId,
+    clientId: payload.clientId,
+    userId: payload.userId,
+    status: payload.status as TaskStatus,
+    priority: 'Medium',
+    billable: payload.billable,
+    estimatedHours: payload.estimatedHours,
+    assignedTo: payload.assignedTo,
+    createdAt: payload.createdAt,
+    origin: 'client',
+    due_date: null,
+    tags: [],
+    creatorName: null,
+  };
+}
+
+/** Fetch client-scoped tasks from the `client_tasks` table, optionally filtered by client. */
+export function listClientTasksFromTable(clientId?: string) {
+  const url = clientId
+    ? `/api/client-tasks?clientId=${encodeURIComponent(clientId)}`
+    : '/api/client-tasks';
+  return api
+    .get<ApiResponse<IClientTaskPayload[]>>(url)
+    .then((response) => ({
+      ...response,
+      data: response.data?.map(toClientTask),
+    }));
+}
+
+/** Create a client-scoped task in the `client_tasks` table. */
+export function createClientTaskFromTable(input: ICreateClientTaskInput) {
+  return api
+    .post<ApiResponse<IClientTaskPayload>>('/api/client-tasks', {
+      ...input,
+      userId: input.userId,
+    })
+    .then((response) => ({
+      ...response,
+      data: response.data ? toClientTask(response.data) : undefined,
+    }));
+}
+
+/** Update a client-scoped task in the `client_tasks` table. */
+export function updateClientTaskFromTable(id: string, input: Partial<ICreateClientTaskInput>) {
+  return api
+    .patch<ApiResponse<IClientTaskPayload>>(`/api/client-tasks/${id}`, input)
+    .then((response) => ({
+      ...response,
+      data: response.data ? toClientTask(response.data) : undefined,
+    }));
+}
+
+/** Delete a client-scoped task from the `client_tasks` table. */
+export function deleteClientTaskFromTable(id: string) {
+  return api
+    .delete<ApiResponse<IClientTaskPayload>>(`/api/client-tasks/${id}`)
+    .then((response) => ({
+      ...response,
+      data: response.data ? toClientTask(response.data) : undefined,
+    }));
 }

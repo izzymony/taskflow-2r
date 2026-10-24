@@ -3,11 +3,12 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Dialog } from '@base-ui/react/dialog'
-import { Plus, X, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 
 import {
   TASK_PRIORITIES,
   TASK_STATUSES,
+  type BoardTask,
   type ICreateTaskInput,
   type ITask,
   type TaskPriority,
@@ -16,8 +17,8 @@ import {
 import { createTask, listTasks, updateTask, deleteTask } from '@/lib/api/tasks'
 import { cn } from '@/lib/utils'
 import { PageHeader, TaskflowShell } from '@/components/taskflow-shell'
-import { TaskStatusMenu } from '@/components/task-status-menu'
 import { TaskEditDialog } from '@/components/task-edit-dialog'
+import { TaskKanbanBoard } from '@/components/task-kanban-board'
 import { useTaskStatus } from '@/hooks/use-task-status'
 
 export interface ITaskMember {
@@ -434,12 +435,17 @@ export default function Page() {
     })
   }
 
-  function handleDelete(task: ITask) {
+  function handleEdit(task: BoardTask) {
+    setEditingTask(task as ITask)
+    setEditOpen(true)
+  }
+
+  function handleDelete(task: BoardTask) {
     if (!window.confirm(`Delete task "${task.title}"?`)) return
     deleteMutation.mutate(task.id)
   }
 
-  const handleStatusChange = useCallback((task: ITask, status: TaskStatus) => {
+  const handleStatusChange = useCallback((task: BoardTask, status: TaskStatus) => {
     setStatusError(null)
     statusMutation.mutate(
       { id: task.id, status },
@@ -502,69 +508,14 @@ export default function Page() {
               Try again
             </button>
           </div>
-        ) : tasksQuery.data.length === 0 ? (
-          <p className="text-sm text-[#7f8a9e]">No tasks yet. Create your first task.</p>
         ) : (
-          <div className="space-y-3">
-            {tasksQuery.data.map((task) => (
-              <article
-                key={task.id}
-                className="task-card relative rounded-xl border border-[#edf0f5] bg-white p-4 transition hover:border-[#ffb9bb] hover:shadow-md"
-              >
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setEditingTask(task)
-                    setEditOpen(true)
-                  }}
-                  aria-label={`More options for ${task.title}`}
-                  className="absolute top-2 right-2 rounded-lg p-1.5 text-[#8b96a9] transition hover:bg-[#f6f8fc] hover:text-[#ff646b]"
-                >
-                  <MoreHorizontal className="size-4" />
-                  <span className="sr-only">More options</span>
-                </button>
-                <div className="task-dot blue" />
-                <div className="min-w-0 flex-1 pr-10">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-[#172033]">{task.title}</h3>
-                    <TaskStatusMenu
-                      task={task}
-                      disabled={statusMutation.isPending}
-                      onMove={(status) => handleStatusChange(task, status)}
-                    />
-                    <span className={cn('status-pill', priorityColor[task.priority])}>
-                      {task.priority}
-                    </span>
-                  </div>
-                  {task.description ? (
-                    <p className="mt-1 text-sm text-[#7f8a9e]">{task.description}</p>
-                  ) : null}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-[#8b96a9]">
-                    {task.creatorName ? <span>Created by {task.creatorName}</span> : null}
-                    {task.due_date ? (
-                      <span className="flex items-center gap-1">
-                        Due{' '}
-                        <time>{new Date(task.due_date).toLocaleDateString()}</time>
-                      </span>
-                    ) : null}
-                    {task.tags.length > 0 && (
-                      <span className="flex flex-wrap gap-1">
-                        {task.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="tag-chip bg-[#edf3ff] text-[#4e7cff]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <TaskKanbanBoard
+            tasks={tasksQuery.data ?? []}
+            onStatusChange={handleStatusChange}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            isPending={tasksQuery.isPending || statusMutation.isPending || editMutation.isPending || deleteMutation.isPending}
+          />
         )}
       </section>
       <TaskFormDialog
