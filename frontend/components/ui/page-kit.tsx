@@ -1,7 +1,8 @@
 import type { ComponentType, FormEvent, ReactNode } from 'react';
-import { AlertTriangle, Inbox, RefreshCw, Search } from 'lucide-react';
+import { AlertTriangle, Archive, Edit2, Inbox, RefreshCw, Search, Trash2, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import type { IClient } from '@/lib/types';
 
 /** Shared input styling — every page form uses the same look. */
 export const inputClass =
@@ -79,10 +80,10 @@ export function FilterTabs<T extends string>({
             onClick={() => onChange(option.value)}
             aria-pressed={active}
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+              'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
               active
-                ? 'border-[#ff646b] bg-[#fff0f0] text-[#ff646b]'
-                : 'border-[#e7ebf2] bg-white text-[#7f8a9e] hover:border-[#ffb9bb] hover:text-[#ff646b]',
+                ? 'border-[#ff646b] bg-[#fff0f0] text-[#ff646b] shadow-sm shadow-[#ff646b]/15'
+                : 'border-[#e7ebf2] bg-white text-[#7f8a9e] hover:border-[#ffb9bb] hover:text-[#ff646b] hover:bg-[#fbfcff]',
             )}
           >
             {option.label}
@@ -106,12 +107,21 @@ export function FilterTabs<T extends string>({
 export type StatTone = 'blue' | 'green' | 'coral' | 'amber' | 'purple';
 
 const statToneClass: Record<StatTone, string> = {
-  blue: 'bg-[#edf3ff] text-[#4e7cff]',
-  green: 'bg-[#eafaf3] text-[#25a66a]',
-  coral: 'bg-[#fff0f0] text-[#ff646b]',
-  amber: 'bg-[#fff6e5] text-[#d98a12]',
-  purple: 'bg-[#f2efff] text-[#7d5cf0]',
+  blue: 'bg-[#edf3ff] text-[#4e7cff] shadow-[0_0_20px_rgba(78,124,255,0.2)]',
+  green: 'bg-[#eafaf3] text-[#25a66a] shadow-[0_0_20px_rgba(37,166,106,0.2)]',
+  coral: 'bg-[#fff0f0] text-[#ff646b] shadow-[0_0_20px_rgba(255,100,107,0.2)]',
+  amber: 'bg-[#fff6e5] text-[#d98a12] shadow-[0_0_20px_rgba(217,138,18,0.2)]',
+  purple: 'bg-[#f2efff] text-[#7d5cf0] shadow-[0_0_20px_rgba(125,92,240,0.2)]',
 };
+
+export interface StatCardProps {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon: ComponentType<{ className?: string }>;
+  tone?: StatTone;
+  trend?: { value: string; positive: boolean };
+}
 
 export function StatCard({
   label,
@@ -119,21 +129,29 @@ export function StatCard({
   hint,
   icon: Icon,
   tone = 'blue',
-}: {
-  label: string;
-  value: string | number;
-  hint?: string;
-  icon: ComponentType<{ className?: string }>;
-  tone?: StatTone;
-}) {
+  trend,
+}: StatCardProps) {
   return (
-    <div className="stat-card">
+    <div className="stat-card stat-card-gradient animate-slide-in">
       <span className={cn('stat-icon', statToneClass[tone])}>
         <Icon className="size-5" />
       </span>
       <div className="min-w-0">
         <p className="text-xs font-medium text-[#8b96a9]">{label}</p>
-        <p className="mt-1 text-xl font-bold tracking-[-0.02em] text-[#172033]">{value}</p>
+        <div className="mt-1 flex items-baseline gap-1">
+          <p className="text-xl font-bold tracking-[-0.02em] text-[#172033]">{value}</p>
+          {trend && (
+            <span
+              className={cn(
+                'text-xs font-semibold',
+                trend.positive ? 'text-[#25a66a]' : 'text-[#ff646b]',
+              )}
+            >
+              {trend.positive ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
+              {trend.value}
+            </span>
+          )}
+        </div>
         {hint ? <p className="mt-0.5 truncate text-[11px] text-[#aeb9cc]">{hint}</p> : null}
       </div>
     </div>
@@ -256,5 +274,130 @@ export function FormShell({
         </div>
       </form>
     </section>
+  );
+}
+
+export function Toast({
+  type = 'success',
+  title,
+  message,
+  onClose,
+}: {
+  type?: 'success' | 'error' | 'info';
+  title: string;
+  message?: string;
+  onClose?: () => void;
+}) {
+  const toneClass: Record<string, string> = {
+    success: 'toast-success text-[#25a66a]',
+    error: 'toast-error text-[#ff646b]',
+    info: 'toast-info text-[#4e7cff]',
+  };
+  const iconMap: Record<string, ComponentType<{ className?: string }>> = {
+    success: CheckCircle2,
+    error: AlertTriangle,
+    info: Inbox,
+  };
+  const Icon = iconMap[type];
+  return (
+    <div className={cn('toast', toneClass[type])} role="alert" aria-live="polite">
+      <div className="flex items-start gap-3">
+        <span className="flex shrink-0 size-9 items-center justify-center rounded-lg bg-[rgba(0,0,0,0.05)]">
+          <Icon className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-[#172033]">{title}</p>
+          {message ? <p className="mt-0.5 text-xs text-[#7f8a9e]">{message}</p> : null}
+        </div>
+        {onClose ? (
+          <button type="button" onClick={onClose} className="text-[11px] text-[#aeb9cc] hover:text-[#172033]">
+            ✕
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function ClientCard({
+  client,
+  onEdit,
+  onArchive,
+  onDelete,
+}: {
+  client: IClient;
+  onEdit?: (client: IClient) => void;
+  onArchive?: (id: string) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const statusTone: Record<string, string> = {
+    Active: 'status-green',
+    Pending: 'status-amber',
+    Inactive: 'status-muted',
+  };
+  const planTone: Record<string, string> = {
+    Starter: 'status-muted',
+    Growth: 'status-blue',
+    Enterprise: 'status-purple',
+  };
+  return (
+    <div className="client-card group">
+      <div className="client-avatar-ring">
+        <div className="client-avatar-inner">
+          {client.company.slice(0, 2).toUpperCase()}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-base font-bold text-[#172033] leading-tight">{client.company}</h3>
+        {client.contactName && (
+          <p className="mt-0.5 text-sm text-[#566176]">{client.contactName}</p>
+        )}
+        <p className="mt-1 text-[11px] text-[#aeb9cc]">{client.email ?? 'No email'}</p>
+      </div>
+      <div className="flex items-end justify-between gap-3 mt-4 pt-3 border-t border-[#f4f6f9]">
+        <span className={cn('status-pill', statusTone[client.status] || 'status-muted')}>
+          {client.status}
+        </span>
+        <span className={cn('status-pill', planTone[client.plan] || 'status-muted')}>
+          {client.plan}
+        </span>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-[#172033]">${client.value.toLocaleString()}/mo</span>
+        <span className="text-xs text-[#8b96a9]">{client.projects} project{client.projects !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="mt-4 flex gap-2">
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(client)}
+            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#f6f8fc] hover:text-[#172033] transition-all"
+            aria-label="Edit client"
+          >
+            <Edit2 className="size-4" />
+          </button>
+        )}
+        {onArchive && (
+          <button
+            type="button"
+            onClick={() => onArchive(client.id)}
+            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#fff0f0] hover:text-[#ff646b] transition-all"
+            aria-label="Archive client"
+          >
+            <Archive className="size-4" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(client.id)}
+            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#fff0f0] hover:text-[#ff646b] transition-all"
+            aria-label="Delete client"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

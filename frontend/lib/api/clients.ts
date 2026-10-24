@@ -9,7 +9,7 @@ import type {
 
 interface IClientPayload {
   id: string;
-  userId: string;
+  userId: number;
   title: string;
   company: string;
   contactName: string | null;
@@ -52,11 +52,11 @@ interface IProjectPayload {
   id: string;
   name: string;
   clientId: string;
-  userId: string;
+  userId: number;
   description: string | null;
   status: string;
+  dueDate: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 function toProject(payload: IProjectPayload): IProject {
@@ -67,8 +67,8 @@ function toProject(payload: IProjectPayload): IProject {
     userId: payload.userId,
     description: payload.description ?? null,
     status: payload.status as IProject['status'],
+    dueDate: payload.dueDate,
     createdAt: payload.createdAt,
-    updatedAt: payload.updatedAt,
   };
 }
 
@@ -78,11 +78,13 @@ export const clients = {
       .get<ApiResponse<IClientPayload[]>>('/api/clients')
       .then((response) => ({ ...response, data: response.data?.map(toClient) })),
 
-  create: (input: ICreateClientInput) =>
+  /** Create client. Backend injects userId from session — do not send userId. */
+  create: (input: Omit<ICreateClientInput, 'userId'>) =>
     api
       .post<ApiResponse<IClientPayload>>('/api/clients', input)
       .then((response) => ({ ...response, data: response.data ? toClient(response.data) : undefined })),
 
+  /** Partial update of client fields. */
   update: (id: string, input: Partial<ICreateClientInput>) =>
     api
       .patch<ApiResponse<IClientPayload>>(`/api/clients/${id}`, input)
@@ -100,8 +102,19 @@ export const projects = {
       .get<ApiResponse<IProjectPayload[]>>('/api/projects')
       .then((response) => ({ ...response, data: response.data?.map(toProject) })),
 
-  create: (input: ICreateProjectInput) =>
+  /** Create project. Backend injects userId from session — do not send userId. */
+  create: (input: Omit<ICreateProjectInput, 'userId'>) =>
     api
       .post<ApiResponse<IProjectPayload>>('/api/projects', input)
+      .then((response) => ({ ...response, data: response.data ? toProject(response.data) : undefined })),
+
+  update: (id: string, input: Partial<ICreateProjectInput>) =>
+    api
+      .patch<ApiResponse<IProjectPayload>>(`/api/projects/${id}`, input)
+      .then((response) => ({ ...response, data: response.data ? toProject(response.data) : undefined })),
+
+  remove: (id: string) =>
+    api
+      .delete<ApiResponse<IProjectPayload>>(`/api/projects/${id}`)
       .then((response) => ({ ...response, data: response.data ? toProject(response.data) : undefined })),
 };

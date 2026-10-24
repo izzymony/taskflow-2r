@@ -8,17 +8,17 @@ import {
   TASK_PRIORITIES,
   TASK_STATUSES,
   type ICreateTaskInput,
+  type IClientTask,
   type ITask,
   type TaskPriority,
   type TaskStatus,
 } from '@/lib/types';
-import { updateTask, deleteTask } from '@/lib/api/tasks';
 import { cn } from '@/lib/utils';
 
 interface TaskEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task: ITask;
+  task: ITask | IClientTask;
   onSave: (input: ICreateTaskInput) => void;
   isPending?: boolean;
   errorMessage?: string | null;
@@ -31,6 +31,7 @@ interface FormState {
   priority: TaskPriority;
   dueDate: string;
   tags: string[];
+  projectId: string | null;
 }
 
 const priorityColor: Record<TaskPriority, string> = {
@@ -96,18 +97,19 @@ function TaskEditForm({
   isPending,
   errorMessage,
 }: {
-  task: ITask;
+  task: ITask | IClientTask;
   onSave: (input: ICreateTaskInput) => void;
   isPending: boolean;
   errorMessage?: string | null;
 }) {
   const [form, setForm] = useState<FormState>({
     title: task.title,
-    description: task.description,
+    description: task.description ?? '',
     status: task.status,
-    priority: task.priority,
-    dueDate: taskDueDateISO(task),
-    tags: [...task.tags],
+    priority: 'priority' in task && task.priority ? task.priority : 'Medium',
+    dueDate: taskDueDateISO(task as ITask),
+    tags: [...(task.tags ?? [])],
+    projectId: 'projectId' in task && task.projectId ? task.projectId : '',
   });
   const [tagInput, setTagInput] = useState('');
   const [touched, setTouched] = useState(false);
@@ -142,12 +144,6 @@ function TaskEditForm({
     }
   }
 
-  function handleDelete() {
-    if (window.confirm(`Delete task "${task.title}"?`)) {
-      // Handled by parent through a delete action on the dialog context
-    }
-  }
-
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched(true);
@@ -166,6 +162,7 @@ function TaskEditForm({
       priority: form.priority,
       tags,
       due_date: form.dueDate ? new Date(`${form.dueDate}T09:00:00`).toISOString() : null,
+      ...(form.projectId ? { projectId: form.projectId } : {}),
     };
 
     onSave(payload);
@@ -227,6 +224,30 @@ function TaskEditForm({
           </select>
         </label>
       </div>
+
+      {('clientId' in task && task.clientId) ? (
+        <>
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+            Client ID
+            <input
+              type="text"
+              value={task.clientId}
+              readOnly
+              className={cn(inputBase, 'h-11 px-3', 'bg-[#f8fafc]')}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+            Project ID (optional)
+            <input
+              type="text"
+              value={form.projectId ?? ''}
+              onChange={(event) => patch('projectId', event.target.value)}
+              placeholder="proj_abc123"
+              className={cn(inputBase, 'h-11 px-3')}
+            />
+          </label>
+        </>
+      ) : null}
 
       <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
         Due date

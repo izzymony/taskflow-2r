@@ -27,6 +27,8 @@ interface TaskFormDialogProps {
   errorMessage?: string | null
   members?: ITaskMember[]
   clientId?: string | null
+  projectId?: string | null
+  projects?: { id: string; name: string }[]
   title?: string
 }
 
@@ -38,16 +40,22 @@ interface FormState {
   dueDate: string
   tags: string[]
   assignedTo: string
+  projectId: string
+  billable: boolean
+  estimatedHours: string
 }
 
 const initialState: FormState = {
   title: '',
   description: '',
-  status: 'Todo',
+  status: 'Backlog',
   priority: 'Medium',
   dueDate: '',
   tags: [],
   assignedTo: '',
+  projectId: '',
+  billable: true,
+  estimatedHours: '',
 }
 
 const priorityColor: Record<TaskPriority, string> = {
@@ -78,6 +86,8 @@ export function TaskFormDialog({
   errorMessage,
   members = [],
   clientId,
+  projectId,
+  projects = [],
   title = 'Create new task',
 }: TaskFormDialogProps) {
   return (
@@ -106,6 +116,8 @@ export function TaskFormDialog({
             errorMessage={errorMessage}
             members={members}
             clientId={clientId}
+            projectId={projectId}
+            projects={projects}
           />
         </Dialog.Popup>
       </Dialog.Portal>
@@ -119,12 +131,16 @@ function TaskForm({
   errorMessage,
   members,
   clientId,
+  projectId,
+  projects = [],
 }: {
   onSubmit: (input: ICreateTaskInput) => void
   isPending: boolean
   errorMessage?: string | null
   members: ITaskMember[]
   clientId?: string | null
+  projectId?: string | null
+  projects?: { id: string; name: string }[]
 }) {
   const [form, setForm] = useState<FormState>(initialState)
   const [tagInput, setTagInput] = useState('')
@@ -165,24 +181,35 @@ function TaskForm({
     setTouched(true)
     if (!form.title.trim()) return
 
+    const isClientTask = Boolean(clientId)
+
     const pendingTag = tagInput.trim()
     const tags =
       pendingTag && !form.tags.some((t) => t.toLowerCase() === pendingTag.toLowerCase())
         ? [...form.tags, pendingTag].slice(0, TAGS_MAX)
         : form.tags
 
-    const payload: ICreateTaskInput = {
+    const basePayload = {
       title: form.title.trim(),
       description: form.description.trim(),
       status: form.status,
-      priority: form.priority,
-      tags,
-      due_date: form.dueDate ? new Date(`${form.dueDate}T09:00:00`).toISOString() : null,
-      assignedTo: form.assignedTo ? Number(form.assignedTo) : null,
-      ...(clientId ? { clientId } : {}),
+      ...(isClientTask
+        ? {
+            clientId: clientId!,
+            projectId: form.projectId || projectId || '',
+            assignedTo: form.assignedTo || null,
+            billable: form.billable ? 1 : 0,
+            ...(form.estimatedHours ? { estimatedHours: form.estimatedHours } : {}),
+          }
+        : {
+            priority: form.priority,
+            tags,
+            due_date: form.dueDate ? new Date(`${form.dueDate}T09:00:00`).toISOString() : null,
+            assignedTo: form.assignedTo ? Number(form.assignedTo) : null,
+          }),
     }
 
-    onSubmit(payload)
+    onSubmit(basePayload)
   }
 
   return (
@@ -246,33 +273,78 @@ function TaskForm({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
-          Priority
-          <select
-            value={form.priority}
-            onChange={(event) => patch('priority', event.target.value as TaskPriority)}
-            className={cn(inputBase, 'h-11 px-3')}
-          >
-            {TASK_PRIORITIES.map((priority) => (
-              <option key={priority} value={priority}>
-                {priority}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!clientId && (
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+            Priority
+            <select
+              value={form.priority}
+              onChange={(event) => patch('priority', event.target.value as TaskPriority)}
+              className={cn(inputBase, 'h-11 px-3')}
+            >
+              {TASK_PRIORITIES.map((priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className={cn('grid gap-4', members.length > 0 && 'sm:grid-cols-2')}>
-        <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
-          Due date
-          <input
-            type="date"
-            min={todayISO()}
-            value={form.dueDate}
-            onChange={(event) => patch('dueDate', event.target.value)}
-            className={cn(inputBase, 'h-11 px-3')}
-          />
-        </label>
+        {!clientId && (
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+            Due date
+            <input
+              type="date"
+              min={todayISO()}
+              value={form.dueDate}
+              onChange={(event) => patch('dueDate', event.target.value)}
+              className={cn(inputBase, 'h-11 px-3')}
+            />
+          </label>
+        )}
+
+        {clientId ? (
+          <>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+              Project <span className="text-[#ff646b]">*</span>
+              <select
+                value={form.projectId}
+                onChange={(event) => patch('projectId', event.target.value)}
+                className={cn(inputBase, 'h-11 px-3')}
+              >
+                <option value="">Choose a project…</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+              Billable
+              <select
+                value={form.billable ? '1' : '0'}
+                onChange={(event) => patch('billable', event.target.value === '1')}
+                className={cn(inputBase, 'h-11 px-3')}
+              >
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+              Estimated hours
+              <input
+                type="number"
+                value={form.estimatedHours}
+                onChange={(event) => patch('estimatedHours', event.target.value)}
+                placeholder="0"
+                className={cn(inputBase, 'h-11 px-3')}
+              />
+            </label>
+          </>
+        ) : null}
 
         {members.length > 0 ? (
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
@@ -293,8 +365,9 @@ function TaskForm({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
-        <label htmlFor="task-tags">Tags</label>
+      {!clientId && (
+        <div className="flex flex-col gap-1.5 text-xs font-semibold text-[#172033]">
+          <label htmlFor="task-tags">Tags</label>
         <div
           className={cn(
             inputBase,
@@ -330,7 +403,8 @@ function TaskForm({
         <span className="text-[11px] font-medium text-[#b6bfcd]">
           Press Enter or comma to add. Up to {TAGS_MAX} tags.
         </span>
-      </div>
+        </div>
+      )}
 
       {errorMessage ? (
         <p className="rounded-xl bg-[#fff0f0] px-4 py-3 text-xs font-medium text-[#ff646b]">

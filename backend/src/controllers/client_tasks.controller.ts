@@ -22,6 +22,7 @@ export async function list(req: Request, res: Response, next: NextFunction) {
     const clientId = req.query.clientId;
     const tasks = await getClientTasksService(
       typeof clientId === "string" ? clientId : undefined,
+      userId,
     );
     return res.status(200).json({ success: true, data: tasks });
   } catch (error) {
@@ -36,7 +37,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
     }
 
-    const newTask = await createClientTaskService(req.body);
+    const newTask = await createClientTaskService({ ...req.body, userId });
     if (!newTask) {
       return res.status(400).json({ success: false, message: "Failed to create client task" });
     }
@@ -59,7 +60,7 @@ export async function update(req: Request, res: Response, next: NextFunction) {
       return res.status(400).json({ success: false, message: "Invalid client task id" });
     }
 
-    const updated = await updateClientTaskService(id, req.body);
+    const updated = await updateClientTaskService(id, { ...req.body, userId });
     if (!updated) {
       return res.status(404).json({ success: false, message: "Client task not found" });
     }
