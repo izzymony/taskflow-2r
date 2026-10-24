@@ -180,7 +180,14 @@
 .panel { @apply rounded-2xl border border-[#edf0f5] bg-white p-6 shadow-[0_8px_28px_rgba(26,44,75,0.04)] sm:p-7 transition-all hover:shadow-[0_12px_40px_rgba(26,44,75,0.06)]; }
 .panel-hover { @apply transition-all hover:shadow-[0_12px_40px_rgba(26,44,75,0.08)] hover:border-[#ffb9bb]; }
 .section-title { @apply text-lg font-bold tracking-[-0.02em] text-[#172033]; } .section-subtitle { @apply mt-1 text-xs text-[#8b96a9]; }
-.client-card { @apply relative rounded-2xl border border-[#edf0f5] bg-white p-6 shadow-[0_8px_28px_rgba(26,44,75,0.04)] transition-all hover:shadow-[0_16px_48px_rgba(26,44,75,0.08)] hover:-translate-y-2 hover:border-[#ffb9bb]; }
+.client-card { @apply relative overflow-hidden rounded-2xl border border-[#e8edf5] bg-white p-6 shadow-[0_8px_28px_rgba(26,44,75,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#ffb9bb] hover:shadow-[0_18px_48px_rgba(26,44,75,0.1)]; }
+.client-card::after { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, #ff646b, #4e7cff); opacity: 0; transition: opacity 200ms ease; }
+.client-card:hover::after, .client-card:focus-within::after { opacity: 1; }
+.task-board { scrollbar-width: thin; scrollbar-color: #d8deea transparent; }
+.task-column { width: min(100%, 330px); }
+.task-column-list { scrollbar-width: thin; scrollbar-color: #d8deea transparent; }
+.task-card { animation: taskCardIn 240ms ease both; }
+@keyframes taskCardIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .client-avatar-ring { @apply relative flex size-14 items-center justify-center rounded-2xl mb-4; }
 .client-avatar-ring::before { @apply content-[''] absolute inset-0 rounded-2xl bg-gradient-to-br from-[#ff646b] to-[#4e7cff] opacity-20 group-hover:opacity-40 transition-opacity; }
 .client-avatar-inner { @apply relative z-10 flex size-10 items-center justify-center rounded-xl bg-white text-xs font-bold text-[#172033] shadow-md; }
