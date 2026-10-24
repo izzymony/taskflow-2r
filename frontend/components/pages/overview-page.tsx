@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import {
   TASK_PRIORITIES,
   TASK_STATUSES,
+  type BoardTask,
   type IActivityEntry,
   type ICreateTaskInput,
   type ITask,
@@ -103,7 +104,7 @@ export function OverviewPage({ preview }: OverviewPageProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<ITask | null>(null);
+  const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: '',
@@ -285,7 +286,7 @@ export function OverviewPage({ preview }: OverviewPageProps) {
     applyStatus(task, task.status === 'Completed' ? 'Todo' : 'Completed');
   }
 
-  function handleStatusChange(task: ITask, status: TaskStatus) {
+  function handleStatusChange(task: BoardTask, status: TaskStatus) {
     setStatusError(null);
     statusMutation.mutate(
       { id: task.id, status },
@@ -307,12 +308,12 @@ export function OverviewPage({ preview }: OverviewPageProps) {
     });
   }
 
-  function handleEdit(task: ITask) {
+  function handleEdit(task: BoardTask) {
     setEditingTask(task);
     setEditOpen(true);
   }
 
-  function handleDelete(task: ITask) {
+  function handleDelete(task: BoardTask) {
     if (!window.confirm(`Delete task "${task.title}"?`)) return;
     setEditError(null);
     deleteMutation.mutate(task.id);
@@ -482,7 +483,7 @@ export function OverviewPage({ preview }: OverviewPageProps) {
         />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
             <StatCard
               label="Total tasks"
               value={stats.total}

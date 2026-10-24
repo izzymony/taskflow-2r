@@ -6,12 +6,13 @@ import {
   getClientsSchema,
   UpdateClientInput,
   cleanClients,
+  createClientSchema,
 } from "../validators/client.validator";
 
 const router = Router();
 
 router.get("/", requireAuth, getAll);
-router.post("/", requireAuth, validate(z.object({ body: cleanClients })), create);
+router.post("/", requireAuth, validate(createClientSchema), create);
 router.patch(
   "/:id",
   requireAuth,

@@ -7,7 +7,7 @@ import { canTransition } from '@/lib/task-status';
 import type { ITask, TaskStatus } from '@/lib/types';
 
 export interface TaskStatusChange {
-  id: number;
+  id: string | number;
   status: TaskStatus;
 }
 

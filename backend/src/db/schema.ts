@@ -89,6 +89,7 @@ export const projects = mysqlTable("projects", {
   name: varchar({ length: 255 }).notNull(),
   description: text("description"),
   clientId: varchar("client_id", { length: 255 }).references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   status: varchar("status", { length: 50 }).default("Active").notNull(),
   dueDate: timestamp("due_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -101,6 +102,7 @@ export const clientTasks = mysqlTable("client_tasks", {
   description: text("description"),
   projectId: varchar("project_id", { length: 255 }).references(() => projects.id, { onDelete: "cascade" }).notNull(),
   clientId: varchar("client_id", { length: 255 }).references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   status: varchar("status", { length: 50 }).default("Backlog").notNull(),
   billable: int("billable").default(1).notNull(),
   estimatedHours: varchar("estimated_hours", { length: 50 }),
@@ -125,8 +127,17 @@ export const relations = defineRelations({users,refreshTokens,tasks,clients,proj
       to: r.tasks.createdBy,
 }),
 
+ projects: r.one.projects({
+      from: r.users.id,
+      to: r.projects.userId,
+}),
 
- clients: r.one.clients({
+ clientTasks: r.one.clientTasks({
+      from: r.users.id,
+      to: r.clientTasks.userId,
+}),
+
+  clients: r.one.clients({
       from: r.users.id,
       to: r.clients.userId,
 }),
@@ -145,6 +156,10 @@ clients: {
 },
 
 projects: {
+    user: r.one.users({
+      from: r.projects.userId,
+      to: r.users.id,
+    }),
     tasks: r.many.tasks({
       from: r.projects.id,
       to: r.tasks.projectId,
@@ -156,6 +171,10 @@ projects: {
 },
 
 clientTasks: {
+    user: r.one.users({
+      from: r.clientTasks.userId,
+      to: r.users.id,
+    }),
     project: r.one.projects({
       from: r.clientTasks.projectId,
       to: r.projects.id,

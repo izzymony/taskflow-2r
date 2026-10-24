@@ -1,7 +1,7 @@
-export type TaskStatus = 'Todo' | 'In Progress' | 'Under Review' | 'Completed';
+export type TaskStatus = 'Backlog' | 'Todo' | 'In Progress' | 'Under Review' | 'Completed';
 export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical';
 
-export const TASK_STATUSES: TaskStatus[] = ['Todo', 'In Progress', 'Under Review', 'Completed'];
+export const TASK_STATUSES: TaskStatus[] = ['Backlog', 'Todo', 'In Progress', 'Under Review', 'Completed'];
 export const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Critical'];
 
 /**
@@ -12,9 +12,9 @@ export const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Critic
  *  updated_at, created_at, assignedTo`.
  */
 export interface ITask {
-  id: number;
+  id: string | number;
   createdBy: number;
-  assignedTo: number | null;
+  assignedTo: string | number | null;
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -34,7 +34,7 @@ export interface ICreateTaskInput {
   priority?: TaskPriority;
   due_date?: string | null;
   tags?: string[];
-  assignedTo?: number | null;
+  assignedTo?: string | number | null;
   clientId?: string | null;
   projectId?: string | null;
 }
@@ -53,36 +53,56 @@ export interface IProject {
   id: string;
   name: string;
   clientId: string;
-  userId: string;
+  userId: number;
   description?: string | null;
-  status: 'Active' | 'On Hold' | 'Completed' | 'Archived';
+  status: 'Active' | 'Completed' | 'Paused';
+  dueDate: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ICreateProjectInput {
   name: string;
   clientId: string;
-  userId: string;
+  userId: number;
   description?: string | null;
-  status?: 'Active' | 'On Hold' | 'Completed' | 'Archived';
+  status?: 'Active' | 'Completed' | 'Paused';
+  dueDate?: string | null;
 }
 
 /**
- * A task row extended with client/project ownership. When `clientId` is null
- * the task is a personal task (existing behaviour). When `clientId` is set the
- * task belongs to that client and optionally to one of its projects.
+ * A client-scoped task row from the `client_tasks` table.
+ * Kept separate from personal `ITask` — do not mix the two.
  */
-export interface IClientTask extends ITask {
-  clientId: string | null;
+export interface IClientTask {
+  id: string;
+  title: string;
+  description: string | null;
   projectId: string | null;
-  origin: TaskOrigin;
+  clientId: string | null;
+  userId: number;
+  status: TaskStatus;
+  billable: number;
+  estimatedHours: string | null;
+  assignedTo: string | null;
+  createdAt: string;
+  origin: 'client';
+  priority?: TaskPriority;
+  due_date?: string | null;
+  tags?: string[];
+  creatorName?: string | null;
 }
 
-export interface ICreateClientTaskInput extends ICreateTaskInput {
+export interface ICreateClientTaskInput extends Omit<ICreateTaskInput, "assignedTo"> {
   clientId: string;
-  projectId?: string | null;
+  projectId: string;
+  userId?: number;
+  assignedTo?: string | null;
+  billable?: number;
+  estimatedHours?: string | null;
 }
+
+/** Union type accepted by the shared kanban board. */
+export type BoardTask = ITask | IClientTask;
 
 /** State a workspace page can be previewed in. The App Router passes it through
  * `?state=loading|error|empty` so every screen can be reviewed in isolation.
@@ -105,7 +125,7 @@ export type BillingType = 'Hourly' | 'Retainer' | 'Fixed_Project';
 
 export interface IClient {
   id: string; // Match backend varchar string key
-  userId: string;
+  userId: number;
   title: string;
   company: string;
   contactName: string;
@@ -114,7 +134,7 @@ export interface IClient {
   status: ClientStatus;
   plan: ClientPlan;
   billingType: BillingType;
-  rate: string;      // Decimal fields often return as strings to protect precision
+  rate: string;
   currency: string;
   monthlyBudgetCap: number | null;
   lastActivity: string;
@@ -122,24 +142,23 @@ export interface IClient {
   avatar?: string;
   value: number;
   location: string;
-  projects: number;  // Used for tracking the project count on dashboard grids
+  projects: number;
 }
 
 export interface ICreateClientInput {
   id: string;
   title: string;
-  userId: string;
   company: string;
-  contactName: string;
-  email: string;
+  contactName?: string | null;
+  email?: string | null;
   phone: string;
   status?: ClientStatus;
   plan?: ClientPlan;
-  billingType?: BillingType; // Converted to camelCase to match backend schema fields
-  rate?: string;             // Sent as string stringified decimal "150.00"
+  billingType?: BillingType;
+  rate?: string;
   currency?: string;
   monthlyBudgetCap?: number;
- } // Converted to camelCase number
+}
 
 // ---------- Payments ----------
 export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue';

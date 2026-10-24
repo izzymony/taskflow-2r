@@ -7,6 +7,7 @@ import type { TaskStatus } from '@/lib/types';
  * never offered a move the server would reject.
  */
 export const TASK_STATUS_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
+  Backlog: ['Todo', 'In Progress', 'Completed'],
   Todo: ['In Progress', 'Under Review', 'Completed'],
   'In Progress': ['Under Review', 'Completed', 'Todo'],
   'Under Review': ['In Progress', 'Completed', 'Todo'],
@@ -15,6 +16,7 @@ export const TASK_STATUS_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 
 /** Pill classes for each status — shared so every surface looks the same. */
 export const TASK_STATUS_TONE: Record<TaskStatus, string> = {
+  Backlog: 'status-muted',
   Todo: 'status-blue',
   'In Progress': 'status-amber',
   'Under Review': 'status-purple',
@@ -23,6 +25,7 @@ export const TASK_STATUS_TONE: Record<TaskStatus, string> = {
 
 /** Dot colour for the status marker inside the move menu. */
 export const TASK_STATUS_DOT: Record<TaskStatus, string> = {
+  Backlog: 'bg-[#8b96a9]',
   Todo: 'bg-[#4e7cff]',
   'In Progress': 'bg-[#d98a12]',
   'Under Review': 'bg-[#7d5cf0]',

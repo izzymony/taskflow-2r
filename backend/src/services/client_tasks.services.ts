@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { clientTasks } from "../db/schema";
+import { randomUUID } from "crypto";
 import {
   type ClientTaskInput,
   type ClientTaskStatus,
@@ -14,6 +15,7 @@ export interface ClientTaskRecord {
   description: string | null;
   projectId: string;
   clientId: string;
+  userId: number;
   status: ClientTaskStatus;
   billable: number;
   estimatedHours: string | null;
@@ -28,6 +30,7 @@ function toClientTaskRecord(row: unknown): ClientTaskRecord {
     description: (row as any).description ?? null,
     projectId: String((row as any).projectId),
     clientId: String((row as any).clientId),
+    userId: Number((row as any).userId),
     status: ((row as any).status ?? "Backlog") as unknown as ClientTaskStatus,
     billable: Number((row as any).billable ?? 1),
     estimatedHours: (row as any).estimatedHours ?? null,
@@ -36,13 +39,19 @@ function toClientTaskRecord(row: unknown): ClientTaskRecord {
   };
 }
 
-export async function getClientTasksService(clientId?: string) {
+export async function getClientTasksService(clientId?: string, userId?: number) {
   let rows: any[];
   if (clientId) {
     rows = await db
       .select()
       .from(clientTasks)
       .where(eq(clientTasks.clientId, clientId))
+      .orderBy(clientTasks.createdAt);
+  } else if (userId) {
+    rows = await db
+      .select()
+      .from(clientTasks)
+      .where(eq(clientTasks.userId, userId))
       .orderBy(clientTasks.createdAt);
   } else {
     rows = await db.select().from(clientTasks).orderBy(clientTasks.createdAt);
@@ -60,7 +69,7 @@ export async function getClientTaskByIdService(id: string) {
 }
 
 export async function createClientTaskService(input: ClientTaskInput) {
-  const id = input.id || crypto.randomUUID();
+  const id = input.id || randomUUID();
 
   await db.insert(clientTasks).values({
     id,
@@ -68,6 +77,7 @@ export async function createClientTaskService(input: ClientTaskInput) {
     description: input.description ?? null,
     projectId: input.projectId,
     clientId: input.clientId,
+    userId: input.userId,
     status: input.status ?? "Backlog",
     billable: input.billable ?? 1,
     estimatedHours: input.estimatedHours ?? null,
@@ -96,6 +106,7 @@ export async function updateClientTaskService(id: string, input: Partial<ClientT
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.projectId !== undefined ? { projectId: input.projectId } : {}),
       ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
+      ...(input.userId !== undefined ? { userId: input.userId } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.billable !== undefined ? { billable: input.billable } : {}),
       ...(input.estimatedHours !== undefined ? { estimatedHours: input.estimatedHours } : {}),

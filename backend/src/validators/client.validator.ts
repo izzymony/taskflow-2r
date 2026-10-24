@@ -31,6 +31,25 @@ export const clientTask = z.enum(CLIENT_STATUS)
 export const clientPlan = z.enum(CLIENT_PLAN)
 export const billingType =z.enum(BILLING_TYPES)
 
+// Schema for creating a client via POST /api/clients.
+// userId and createdAt are injected/defaulted by the DB — do not require them in the request body.
+export const createClientSchema = z.object({
+  body: z.object({
+    id: z.string().min(1, "Client id is required").optional(),
+    title: z.string().trim().min(1, "Title is required").max(255),
+    company: z.string().trim().min(1, "Company is required").max(350),
+    phone: z.string().trim().min(1, "Phone is required").max(11, "Phone must be at most 11 characters"),
+    email: z.string().email("Invalid email").max(255).optional().nullable(),
+    contactName: z.string().trim().max(255).optional().nullable(),
+    plan: z.enum(CLIENT_PLAN),
+    status: z.enum(CLIENT_STATUS),
+    billingType: z.enum(BILLING_TYPES).default("Hourly"),
+    rate: z.string().trim().min(1, "Rate is required").default("0.00"),
+    currency: z.string().trim().min(1, "Currency is required").max(10).default("NGN"),
+    monthlyBudgetCap: z.number().int().nonnegative().optional().nullable(),
+  }),
+});
+
 
 const baseUserSelectSchema = createSelectSchema(clients);
 
