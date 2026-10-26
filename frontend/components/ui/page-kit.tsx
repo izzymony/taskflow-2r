@@ -424,6 +424,6 @@ export function ClientCard({
           </button>
         )}
       </div>
-    </div>
+    </article>
   );
 }
