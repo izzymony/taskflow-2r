@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getProfile } from '@/lib/api/auth'
+import { getStoredUser } from '@/lib/api/client'
 import type { UserProfile } from '@/lib/types/api'
 
 export function useProfile() {
@@ -14,9 +15,15 @@ export function useProfile() {
       }
       return payload.data
     },
+    initialData: () => getStoredUser<UserProfile>() ?? undefined,
+    retry: 1,
+    staleTime: 60 * 1000,
   })
 
-  const fullname = query.data?.fullname
+  const storedUser = typeof window !== 'undefined' ? getStoredUser<UserProfile>() : null
+  const effectiveUser = query.data ?? storedUser ?? undefined
+
+  const fullname = effectiveUser?.fullname
   const firstName = fullname?.split(' ').filter(Boolean)[0]
   const initials = fullname
     ? fullname
@@ -27,5 +34,5 @@ export function useProfile() {
         .join('')
     : ''
 
-  return { ...query, fullname, firstName, initials }
+  return { ...query, data: effectiveUser, fullname, firstName, initials }
 }

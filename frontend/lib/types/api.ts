@@ -2,6 +2,8 @@ export type ApiResponse<T = undefined> = {
   success: boolean
   message?: string
   data?: T
+  token?: string
+  user?: UserProfile
 }
 
 export type UserProfile = {

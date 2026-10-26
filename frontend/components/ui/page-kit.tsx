@@ -1,12 +1,24 @@
 import type { ComponentType, FormEvent, ReactNode } from 'react';
-import { AlertTriangle, Archive, Edit2, Inbox, RefreshCw, Search, Trash2, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Archive,
+  Edit2,
+  Inbox,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  CheckCircle2,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { IClient } from '@/lib/types';
 
 /** Shared input styling — every page form uses the same look. */
 export const inputClass =
-  'w-full rounded-xl border border-[#e5e9f1] bg-white px-3 py-2.5 text-sm text-[#172033] outline-none transition placeholder:text-[#b6bfcd] focus:border-[#ff646b] focus:ring-4 focus:ring-[#ff646b]/10';
+  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#6355ff] focus:ring-4 focus:ring-[#6355ff]/10';
 
 export const selectClass = `${inputClass} appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%237f8a9e%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22M6 9l6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9`;
 
@@ -25,11 +37,11 @@ export function Field({
 }) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <label htmlFor={htmlFor} className="text-xs font-semibold text-[#172033]">
+      <label htmlFor={htmlFor} className="text-xs font-semibold text-slate-800">
         {label}
       </label>
       {children}
-      {hint ? <span className="text-[11px] font-medium text-[#b6bfcd]">{hint}</span> : null}
+      {hint ? <span className="text-[11px] font-medium text-slate-400">{hint}</span> : null}
     </div>
   );
 }
@@ -47,14 +59,14 @@ export function SearchInput({
 }) {
   return (
     <div className={cn('relative', className)}>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a3adbc]" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
       <input
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className={cn(inputClass, 'pl-9')}
+        className={cn(inputClass, 'pl-9 bg-white')}
       />
     </div>
   );
@@ -70,7 +82,7 @@ export function FilterTabs<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -80,18 +92,18 @@ export function FilterTabs<T extends string>({
             onClick={() => onChange(option.value)}
             aria-pressed={active}
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+              'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all',
               active
-                ? 'border-[#ff646b] bg-[#fff0f0] text-[#ff646b] shadow-sm shadow-[#ff646b]/15'
-                : 'border-[#e7ebf2] bg-white text-[#7f8a9e] hover:border-[#ffb9bb] hover:text-[#ff646b] hover:bg-[#fbfcff]',
+                ? 'border-transparent bg-[#6355ff] text-white shadow-2xs'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',
             )}
           >
             {option.label}
             {option.count !== undefined ? (
               <span
                 className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[10px]',
-                  active ? 'bg-white text-[#ff646b]' : 'bg-[#f4f6f9] text-[#8b96a9]',
+                  'rounded-full px-1.5 py-0.2 text-[10px] font-semibold',
+                  active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500',
                 )}
               >
                 {option.count}
@@ -107,11 +119,11 @@ export function FilterTabs<T extends string>({
 export type StatTone = 'blue' | 'green' | 'coral' | 'amber' | 'purple';
 
 const statToneClass: Record<StatTone, string> = {
-  blue: 'bg-[#edf3ff] text-[#4e7cff] shadow-[0_0_20px_rgba(78,124,255,0.2)]',
-  green: 'bg-[#eafaf3] text-[#25a66a] shadow-[0_0_20px_rgba(37,166,106,0.2)]',
-  coral: 'bg-[#fff0f0] text-[#ff646b] shadow-[0_0_20px_rgba(255,100,107,0.2)]',
-  amber: 'bg-[#fff6e5] text-[#d98a12] shadow-[0_0_20px_rgba(217,138,18,0.2)]',
-  purple: 'bg-[#f2efff] text-[#7d5cf0] shadow-[0_0_20px_rgba(125,92,240,0.2)]',
+  blue: 'bg-[#edf3ff] text-[#4e7cff]',
+  green: 'bg-[#e8faf0] text-[#10b981]',
+  coral: 'bg-[#feebeb] text-[#f43f5e]',
+  amber: 'bg-[#fff8eb] text-[#d97706]',
+  purple: 'bg-[#f0efff] text-[#6355ff]',
 };
 
 export interface StatCardProps {
@@ -128,32 +140,46 @@ export function StatCard({
   value,
   hint,
   icon: Icon,
-  tone = 'blue',
+  tone = 'purple',
   trend,
 }: StatCardProps) {
   return (
-    <div className="stat-card stat-card-gradient animate-slide-in">
-      <span className={cn('stat-icon', statToneClass[tone])}>
-        <Icon className="size-5" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-[#8b96a9]">{label}</p>
-        <div className="mt-1 flex items-baseline gap-1">
-          <p className="text-xl font-bold tracking-[-0.02em] text-[#172033]">{value}</p>
-          {trend && (
-            <span
-              className={cn(
-                'text-xs font-semibold',
-                trend.positive ? 'text-[#25a66a]' : 'text-[#ff646b]',
-              )}
-            >
-              {trend.positive ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
-              {trend.value}
-            </span>
-          )}
+    <div className="stat-card">
+      {/* Top Header: Icon + Label + More Options */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className={cn('stat-icon', statToneClass[tone])}>
+            <Icon className="size-4" />
+          </span>
+          <p className="text-xs font-medium text-slate-500">{label}</p>
         </div>
-        {hint ? <p className="mt-0.5 truncate text-[11px] text-[#aeb9cc]">{hint}</p> : null}
+        <button
+          type="button"
+          aria-label="More options"
+          className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-50 transition"
+        >
+          <MoreHorizontal className="size-4" />
+        </button>
       </div>
+
+      {/* Main Stat & Trend Pill */}
+      <div className="mt-4 flex items-baseline justify-between gap-2">
+        <p className="text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+        {trend && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+              trend.positive
+                ? 'bg-[#e8faf0] text-[#10b981]'
+                : 'bg-[#feebeb] text-[#f43f5e]',
+            )}
+          >
+            {trend.positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+            {trend.value}
+          </span>
+        )}
+      </div>
+      {hint ? <p className="mt-1 truncate text-[11px] text-slate-400">{hint}</p> : null}
     </div>
   );
 }
@@ -331,9 +357,9 @@ export function ClientCard({
   onDelete?: (id: string) => void;
 }) {
   const statusTone: Record<string, string> = {
-    Active: 'status-green',
+    Active: 'status-subscribed',
     Pending: 'status-amber',
-    Inactive: 'status-muted',
+    Inactive: 'status-unsubscribed',
   };
   const planTone: Record<string, string> = {
     Starter: 'status-muted',
@@ -342,59 +368,59 @@ export function ClientCard({
   };
   return (
     <div className="client-card group">
-      <div className="client-avatar-ring">
-        <div className="client-avatar-inner">
-          {client.company.slice(0, 2).toUpperCase()}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-[#f0efff] text-[#6355ff] text-sm font-bold shadow-2xs">
+            {client.company.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-slate-900 truncate">{client.company}</h3>
+            {client.contactName && (
+              <p className="text-xs text-slate-500 truncate">{client.contactName}</p>
+            )}
+            <p className="text-[11px] text-slate-400 truncate">{client.email ?? 'No email'}</p>
+          </div>
         </div>
-      </div>
-      <div>
-        <h3 className="text-base font-bold text-[#172033] leading-tight">{client.company}</h3>
-        {client.contactName && (
-          <p className="mt-0.5 text-sm text-[#566176]">{client.contactName}</p>
-        )}
-        <p className="mt-1 text-[11px] text-[#aeb9cc]">{client.email ?? 'No email'}</p>
-      </div>
-      <div className="flex items-end justify-between gap-3 mt-4 pt-3 border-t border-[#f4f6f9]">
-        <span className={cn('status-pill', statusTone[client.status] || 'status-muted')}>
-          {client.status}
-        </span>
-        <span className={cn('status-pill', planTone[client.plan] || 'status-muted')}>
-          {client.plan}
+
+        <span className={cn('status-pill text-xs font-medium', statusTone[client.status] || 'status-muted')}>
+          {client.status === 'Active' ? 'Subscribed' : client.status === 'Inactive' ? 'Unsubscribed' : client.status}
         </span>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[#172033]">${client.value.toLocaleString()}/mo</span>
-        <span className="text-xs text-[#8b96a9]">{client.projects} project{client.projects !== 1 ? 's' : ''}</span>
+
+      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+        <span className="font-semibold text-slate-900">${client.value.toLocaleString()}/mo</span>
+        <span className="text-slate-500">{client.projects} project{client.projects !== 1 ? 's' : ''}</span>
       </div>
-      <div className="mt-4 flex gap-2">
+
+      <div className="mt-3 flex items-center justify-end gap-1.5 pt-2">
         {onEdit && (
           <button
             type="button"
             onClick={() => onEdit(client)}
-            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#f6f8fc] hover:text-[#172033] transition-all"
+            className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-[#6355ff] hover:text-[#6355ff] transition"
             aria-label="Edit client"
           >
-            <Edit2 className="size-4" />
+            <Edit2 className="size-3.5" />
           </button>
         )}
         {onArchive && (
           <button
             type="button"
             onClick={() => onArchive(client.id)}
-            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#fff0f0] hover:text-[#ff646b] transition-all"
+            className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition"
             aria-label="Archive client"
           >
-            <Archive className="size-4" />
+            <Archive className="size-3.5" />
           </button>
         )}
         {onDelete && (
           <button
             type="button"
             onClick={() => onDelete(client.id)}
-            className="flex size-9 items-center justify-center rounded-lg border border-[#e5e9f1] bg-white text-[#8b96a9] hover:bg-[#fff0f0] hover:text-[#ff646b] transition-all"
+            className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-[#eb5757] hover:text-[#eb5757] hover:bg-[#fff5f5] transition"
             aria-label="Delete client"
           >
-            <Trash2 className="size-4" />
+            <Trash2 className="size-3.5" />
           </button>
         )}
       </div>

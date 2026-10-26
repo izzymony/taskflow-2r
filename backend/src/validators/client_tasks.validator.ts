@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createSelectSchema } from "drizzle-orm/zod";
+import { createSelectSchema } from "drizzle-zod";
 import { clientTasks } from "@/db/schema";
 
 export const CLIENT_TASK_STATUSES = [

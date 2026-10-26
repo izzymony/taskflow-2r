@@ -13,7 +13,12 @@ dotenv.config({
     : path.resolve(process.cwd(), ".env.local"),
 });
 
-const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+];
 
 function readRequired(name: string): string {
   const value = process.env[name]?.trim();

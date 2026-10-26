@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Plus, X } from 'lucide-react';
 
@@ -167,7 +167,7 @@ function TaskForm({
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((item) => item !== tag) }))
   }
 
-  function handleTagKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  function handleTagKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter' || event.key === ',') {
       event.preventDefault()
       addTag(tagInput)
@@ -176,7 +176,7 @@ function TaskForm({
     }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setTouched(true)
     if (!form.title.trim()) return

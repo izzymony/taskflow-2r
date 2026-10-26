@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createSelectSchema } from "drizzle-orm/zod";
+import { createSelectSchema } from "drizzle-zod";
 import { projects } from "@/db/schema";
 
 export const PROJECT_STATUS = ["Active", "Completed", "Paused"] as const;

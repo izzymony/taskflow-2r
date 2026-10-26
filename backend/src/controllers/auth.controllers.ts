@@ -40,7 +40,16 @@ export async function registerHandler(req: Request, res: Response, next: NextFun
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(201).json({ success: true, message: "Registration successful" });
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token: accessToken,
+      user: {
+        id: userId,
+        fullname,
+        email,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -86,6 +95,13 @@ export async function loginHandler(req: Request, res: Response, next: NextFuncti
     return res.status(200).json({
       success: true,
       message: "Login successful",
+      token: accessToken,
+      user: {
+        id: user.id,
+        fullname: user.fullname,
+        email: user.email,
+        profileImageUrl: user.profileImageUrl,
+      },
     });
   } catch (error) {
     next(error);

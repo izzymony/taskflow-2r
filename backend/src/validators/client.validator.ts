@@ -1,5 +1,5 @@
 import {z} from "zod";
-import { createSelectSchema } from "drizzle-orm/zod";
+import { createSelectSchema } from "drizzle-zod";
 import {clients } from "@/db/schema";
 import type { TaskStatus } from "./tasks.validator";
 
