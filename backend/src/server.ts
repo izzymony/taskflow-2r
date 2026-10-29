@@ -7,6 +7,7 @@ import clientTasksRouter from "./routes/client_tasks.route";
 import projectsRouter from "./routes/projects.routes";
 import profileRouter from "./routes/profile.routes";
 import { errorHandler } from "./middleware/error-handlers";
+import schedulesRouter from "./routes/schedule.route";
 import { env } from "./config/env";
 
 const app: Express = express();
@@ -44,6 +45,7 @@ app.use("/api/tasks", tasksRouter);
 app.use("/api/clients", clientRouter);
 app.use("/api/client-tasks", clientTasksRouter);
 app.use("/api/projects", projectsRouter);
+app.use("/api/schedules", schedulesRouter);
 
 const health = (req: Request, res: Response) => {
   res.json({ success: true, status: "ok" });

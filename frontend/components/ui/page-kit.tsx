@@ -367,6 +367,7 @@ export function ClientCard({
     Enterprise: 'status-purple',
   };
   return (
+    
     <div className="client-card group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -424,6 +425,7 @@ export function ClientCard({
           </button>
         )}
       </div>
-    </article>
+      </div>
+      
   );
 }

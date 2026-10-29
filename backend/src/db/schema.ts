@@ -1,5 +1,5 @@
 
-import { mysqlTable,mysqlEnum, int, varchar,  timestamp,customType, boolean , decimal, text} from "drizzle-orm/mysql-core";
+import { mysqlTable,mysqlEnum, date, int, varchar,  timestamp,customType, boolean , decimal, text} from "drizzle-orm/mysql-core";
 import { defineRelations } from "drizzle-orm";
 import { ja } from "zod/v4/locales";
 import { title } from "node:process";
@@ -112,9 +112,33 @@ export const clientTasks = mysqlTable("client_tasks", {
 
 // 2. CLIENT
 
+/* export const automations = mysqlTable("automations", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  workflowType: varchar("workflow_type", { length: 100 }).notNull(),
+  triggerType: varchar("trigger_type", { length: 100 }).notNull(),
+  actions: jsonArrayParser("actions").default([]),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}); */
+
+export const schedules = mysqlTable("schedules", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  startTime: timestamp('startTime', { mode: 'string' }).notNull(),
+  endTime: timestamp('endTime', { mode: 'string' }).notNull(),
+  type: mysqlEnum('type', ['Meeting', 'Deadline', 'Focus']).notNull(),
+  attendees: jsonArrayParser("attendees").default([]),
+   date: date('date', { mode: 'string' }).notNull(),
+/*   isActive: boolean("is_active").default(true).notNull(), */
+  location: varchar({length:78}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 
-export const relations = defineRelations({users,refreshTokens,tasks,clients,projects,clientTasks}, (r)=>({
+export const relations = defineRelations({users,refreshTokens,tasks,clients,projects,clientTasks, schedules}, (r)=>({
 
      users: {
     refreshTokens: r.one.refreshTokens({
@@ -141,6 +165,11 @@ export const relations = defineRelations({users,refreshTokens,tasks,clients,proj
       from: r.users.id,
       to: r.clients.userId,
 }),
+
+schedules: r.one.schedules({
+  from: r.users.id,
+  to:r.schedules.userId
+})
 
 },
 
@@ -184,5 +213,7 @@ clientTasks: {
       to: r.clients.id,
     }),
 },
+
+
 
 }))

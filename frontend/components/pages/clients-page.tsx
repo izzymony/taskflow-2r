@@ -268,7 +268,7 @@ export function ClientsPage({ preview }: ClientsPageProps) {
         status: 'Active',
         billingType: 'Hourly',
         rate: '',
-        currency: 'USD',
+        currency: 'NGN',
         monthlyBudgetCap: null,
       });
       setToast({ type: 'success', title: 'Contact created', message: 'New contact has been added to Audience.' });

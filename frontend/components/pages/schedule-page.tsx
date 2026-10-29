@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Focus,
   MapPin,
   Plus,
   Trash2,
@@ -30,11 +31,21 @@ import type {
   PagePreviewState,
   ScheduleEventType,
 } from '@/lib/types';
+import { schedules } from '@/lib/api/schedule';
+import { QueryClient, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
-const TODAY = '2026-10-19';
+interface SchedulePageProps{
+  preview?: PagePreviewState;
+}
+
+type ScheduleFilter = 'Meeting' | 'Deadline' | 'Focus';
+
+const TODAY = new Date().toISOString().split('T')[0];
 const START_HOUR = 8;
 const END_HOUR = 19;
 const HOUR_HEIGHT = 60;
+
+
 
 const eventTone: Record<
   ScheduleEventType,
@@ -59,34 +70,26 @@ const eventTone: Record<
 
 const INITIAL_EVENTS: IScheduleEvent[] = [
   {
-    id: 'event-1',
-    title: 'Design critique',
-    description: 'Review Q4 mockups with the product team',
-    startTime: '10:00',
-    endTime: '11:00',
-    date: '2026-10-19',
-    attendees: ['Sarah Chen', 'Marcus Reed'],
-    type: 'Meeting',
-    location: 'Studio 2',
-  },
-  {
     id: 'event-2',
+    user_id:1,
     title: 'Client check-in',
     description: 'Weekly sync with Northstar Studio',
     startTime: '13:00',
     endTime: '13:30',
-    date: '2026-10-19',
+    date: new Date('2026-10-19'),
     attendees: ['Amanuel Tadesse'],
     type: 'Meeting',
     location: 'Video call',
+    created_at:"2026-10-19"
   },
   {
     id: 'event-3',
     title: 'Focus time',
+    user_id:2,
     description: 'Deep work on the campaign analysis',
     startTime: '15:00',
     endTime: '17:00',
-    date: '2026-10-19',
+    date: new Date('2026-10-19'),
     attendees: [],
     type: 'Focus',
     location: 'Do not disturb',
@@ -95,9 +98,10 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
     id: 'event-4',
     title: 'Q4 roadmap deadline',
     description: 'Submit the product roadmap to leadership',
+    user_id:3,
     startTime: '09:00',
     endTime: '09:30',
-    date: '2026-10-20',
+    date: new Date('2026-10-20'),
     attendees: ['David Kim'],
     type: 'Deadline',
     location: 'Shared drive',
@@ -106,9 +110,10 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
     id: 'event-5',
     title: 'Team standup',
     description: 'Daily sync',
+    user_id:5,
     startTime: '09:00',
     endTime: '09:15',
-    date: '2026-10-21',
+    date: new Date('2026-10-21'),
     attendees: ['Maya Chen', 'Jon Bell', 'Priya Sharma'],
     type: 'Meeting',
     location: 'Video call',
@@ -116,10 +121,11 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'event-6',
     title: 'Invoice run',
+    user_id:4,
     description: 'Send the monthly invoices to active clients',
     startTime: '11:00',
     endTime: '12:00',
-    date: '2026-10-22',
+    date: new Date('2026-10-22'),
     attendees: ['Aisha Patel'],
     type: 'Deadline',
     location: 'Finance',
@@ -127,15 +133,16 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'event-7',
     title: 'Client workshop',
+    user_id:4,
     description: 'Discovery workshop with Brightline Labs',
     startTime: '14:00',
     endTime: '16:00',
-    date: '2026-10-23',
+    date: new Date('2026-10-23'),
     attendees: ['Maya Chen', 'Aisha Patel', 'Omar Hassan'],
     type: 'Meeting',
     location: 'Brightline HQ',
   },
-];
+]; 
 
 function toISODate(date: Date) {
   const year = date.getFullYear();
@@ -163,19 +170,39 @@ interface SchedulePageProps {
   preview?: PagePreviewState;
 }
 
+
+
+
+
+
+
 export function SchedulePage({ preview }: SchedulePageProps) {
-  const { status, error, retry } = useResource({ preview });
-  const [events, setEvents] = useState<IScheduleEvent[]>(INITIAL_EVENTS);
-  const [selectedDate, setSelectedDate] = useState(TODAY);
+  const { status,  retry } = useResource({ preview }); 
+  const queryClient = useQueryClient()
+  const [events, setEvents] = useState<IScheduleEvent[]>([]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editEvent, setEditEvent] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editSchedules, setEditSchedules] = useState<ICreateScheduleEventInput | null>(null);
+  const [editForm, setEditForm] = useState({
+    
+    });
+  const [toast, setToast] = useState<{
+    type: "error" | "success" | "warning";
+    message: string;
+    title:string;
+    
+  } | null>(null)
   const [form, setForm] = useState<ICreateScheduleEventInput>({
     title: '',
     description: '',
-    startTime: '09:00',
-    endTime: '10:00',
-    date: TODAY,
+    startTime: '',
+    endTime: '',
+    date: new Date(),
     attendees: [],
-    type: 'Meeting',
+    type: 'Meeting' as ScheduleEventType,
     location: '',
   });
   const [attendeeInput, setAttendeeInput] = useState('');
@@ -184,22 +211,27 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     () => Array.from({ length: 7 }, (_, index) => addDays(TODAY, index)),
     [],
   );
+const rawList: IScheduleEvent[] = [];
+  const isUsingDemo = rawList.length === 0 && preview !== 'empty';
+  const ScheduleList: IScheduleEvent[] = isUsingDemo ? INITIAL_EVENTS : rawList;
+ 
 
   const dayEvents = useMemo(
-    () =>
-      events
-        .filter((event) => event.date === selectedDate)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
-    [events, selectedDate],
-  );
+    ()=> {
+     return events.filter((event) => toISODate(event.date) === selectedDate).sort((a,b) => a.startTime.localeCompare(b.startTime)) 
+    },
+    [events],
+  )
 
   const weekDeadlines = useMemo(
-    () =>
-      events
-        .filter((event) => event.type === 'Deadline' && event.date >= TODAY)
-        .sort((a, b) => a.date.localeCompare(b.date)),
+    ()=>
+    events
+    .filter((event) => event.type === 'Deadline' && toISODate(event.date) >= toISODate(new Date()))
+    .sort((a, b) => toISODate(a.date).localeCompare(toISODate(b.date))),
     [events],
-  );
+  )
+
+ 
 
   const focusHours = useMemo(() => {
     const minutes = dayEvents
@@ -212,18 +244,168 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     return Math.round((minutes / 60) * 10) / 10;
   }, [dayEvents]);
 
+
+   const counts = useMemo(
+    ()=>({
+      Meeting:ScheduleList.filter((schedules)=> schedules.type === 'Meeting').length,
+      Deadline:ScheduleList.filter((schedules)=> schedules.type === 'Deadline').length,
+      Focus: ScheduleList.filter((schedules)=> schedules.type === 'Focus').length
+      
+    }),
+    [ScheduleList]
+  )
+
+
+  const scheduleQuery = useQuery({
+    queryKey: ['schedules'],
+    queryFn: async()=>{
+      const response = await schedules.list();
+      if (!response.success) throw new Error(response.message || "Failed to load")
+      return response.data ?? []
+    }
+  })
+
+
+
+
+
   const meetingCount = dayEvents.filter((event) => event.type === 'Meeting').length;
 
-  function handleAddEvent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!form.title.trim() || !form.startTime || !form.endTime) return;
 
-    const newEvent: IScheduleEvent = {
+
+    const createMutation = useMutation({
+      mutationFn:(input:Parameters<typeof schedules.create>[0]) => schedules.create(input),
+      onSuccess: ()=>{
+        queryClient.invalidateQueries({ queryKey: ['schedules'] });
+        setIsAdding(false)
+        setForm({
+          title: '',
+          description: '',
+          startTime: '',
+          endTime: '',
+          date: new Date(),
+          attendees: [],
+          type: 'Meeting',
+          location: '',
+        })
+        setAttendeeInput('');
+        setToast({type: 'success', title: 'Contact created', message: 'New contact has been added to Audience.' })
+      },
+      
+      onError:(error)=>{
+       setError(error instanceof Error ? error.message : 'Failed to delete contact');
+      }
+    })
+
+    const updateMutation = useMutation({
+      mutationFn: ({id, input}: {id: string, input: Parameters<typeof schedules.update>[1]}) =>
+      schedules.update(id, input),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['schedules'] })
+        setIsAdding(false)
+        setForm({
+          title: '',
+          description: '',
+          startTime: '',
+          endTime: '',
+          date: new Date(),
+          attendees: [],
+          type: 'Meeting',
+          location: '',
+        })
+        setAttendeeInput('');
+        setToast({type: 'success', title: 'Contact updated', message: 'Contact has been updated.' })
+      },
+      
+      onError:(error)=>{
+      setError(error instanceof Error ? error.message : 'Failed to delete contact');
+      }
+    })
+
+
+    const deleteMutation = useMutation({
+      mutationFn: (id: string) => schedules.remove(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['schedules'] })
+        setIsAdding(false)
+        setForm({
+          title: '',
+          description: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          date: new Date(),
+          attendees: [],
+          type: 'Meeting',
+          location: '',
+        })
+        setAttendeeInput('');
+        setToast({type: 'success', title: 'Contact deleted', message: 'Contact has been deleted.' })
+      },
+      
+      onError:(error)=>{
+       setError(error instanceof Error ? error.message : 'Failed to delete contact');
+      }
+    })
+
+   /*  const handleAddEvent = async(event: FormEvent<HTMLFormElement>)=>{
+      event.preventDefault();
+      setError(null);
+      const title = form.title.trim() || "";
+      if (!title){
+        setError("Title is required")
+        return;
+      }
+      createMutation.mutate({
+        title,
+        description: form.description.trim(),
+        start_time: form.start_time,
+        end_time: form.end_time,
+        date: form.date,
+        attendees: attendeeInput
+        .split(",")
+        .map((name)=> name.trim())
+        .filter(Boolean),
+        type: form.type,
+        location: form.location?.trim() || undefined,
+      })
+    } */
+    
+     const handleAddEvent = (event: FormEvent<HTMLFormElement>)=>{
+      event.preventDefault()
+      setError(null)
+
+const title = form.title.trim() || "";
+      if (!title) {
+        setError("Title is required")
+        return;
+      }
+      if (!form.startTime || !form.endTime) {
+        setError("Start and end time are required")
+        return;
+      }
+
+      createMutation.mutate({
+        title,
+        description: form.description.trim(),
+        startTime: form.startTime,
+        endTime: form.endTime,
+        date: form.date?.toISOString().split('T')[0] ?? '',
+        attendees: attendeeInput
+          .split(',')
+          .map((name) => name.trim())
+          .filter(Boolean),
+        type: form.type,
+        location: form.location?.trim() || undefined,
+      } as unknown as Parameters<typeof schedules.create>[0])
+    } 
+
+    /* const newEvent: IScheduleEvent = {
       id: `event-${Date.now()}`,
       title: form.title.trim(),
+      
       description: form.description.trim(),
-      startTime: form.startTime,
-      endTime: form.endTime,
+      start_time: form.start_time,
+      end_time: form.end_time,
       date: form.date,
       attendees: attendeeInput
         .split(',')
@@ -238,9 +420,9 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     setForm({
       title: '',
       description: '',
-      startTime: '09:00',
-      endTime: '10:00',
-      date: selectedDate,
+      start_time: '09:00',
+      end_time: '10:00',
+      date: new Date(),
       attendees: [],
       type: 'Meeting',
       location: '',
@@ -248,11 +430,12 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     setAttendeeInput('');
     setIsAdding(false);
   }
-
+ */
   function removeEvent(id: string) {
     setEvents((current) => current.filter((event) => event.id !== id));
   }
 
+  
   return (
     <TaskflowShell>
       <PageHeader
@@ -279,6 +462,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
             onCancel={() => setIsAdding(false)}
             onSubmit={handleAddEvent}
             submitLabel="Add event"
+            isSubmitting={createMutation.isPending}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Event title" htmlFor="event-title" className="sm:col-span-2">
@@ -307,9 +491,9 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                 <input
                   id="event-date"
                   type="date"
-                  value={form.date}
+                  value={form.date?.toISOString().split('T')[0]}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, date: event.target.value }))
+                    setForm((current) => ({ ...current, date: new Date(event.target.value) }))
                   }
                   className={inputClass}
                 />
@@ -383,7 +567,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
       <section className="panel">
         <div className="panel-heading flex-col gap-4 sm:flex-row sm:items-center">
           <div>
-            <h2 className="section-title">Week of October 19</h2>
+            <h2 className="section-title">Week of October </h2>
             <p className="section-subtitle">Pick a day to open its timeline</p>
           </div>
           <div className="flex items-center gap-2">
@@ -411,7 +595,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
 
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {week.map((day) => {
-            const count = events.filter((event) => event.date === day).length;
+            const count = events.filter((event) => toISODate(event.date) === day).length;
             const active = day === selectedDate;
             return (
               <button
@@ -556,7 +740,10 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                           </span>
                           <button
                             type="button"
-                            onClick={() => removeEvent(String(event.id))}
+                            onClick={() => {
+                              deleteMutation.mutate(String(event.id));
+                              removeEvent(String(event.id));
+                            }}
                             aria-label={`Remove ${event.title}`}
                             className="rounded-lg p-1 text-[#a3adbc] transition hover:bg-white hover:text-[#ff646b]"
                           >
@@ -637,7 +824,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                         {deadline.title}
                       </p>
                       <p className="text-xs text-[#8b96a9]">
-                        {formatDay(deadline.date, { month: 'short', day: 'numeric' })} ·{' '}
+                        {formatDay(toISODate(deadline.date), { month: 'short', day: 'numeric' })} ·{' '}
                         {deadline.startTime}
                       </p>
                     </div>
@@ -652,5 +839,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     </TaskflowShell>
   );
 }
+
+
 
 export default SchedulePage;

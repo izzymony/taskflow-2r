@@ -192,13 +192,16 @@ export type ScheduleEventType = 'Meeting' | 'Deadline' | 'Focus';
 export interface IScheduleEvent {
   id: string | number;
   title: string;
+  user_id: number;
   description: string;
   startTime: string; // HH:mm
   endTime: string; // HH:mm
-  date: string; // yyyy-mm-dd
   attendees: string[];
+  date:Date ;
   type: ScheduleEventType;
   location?: string;
+  created_at?: string;
+
 }
 
 export interface ICreateScheduleEventInput {
@@ -206,10 +209,11 @@ export interface ICreateScheduleEventInput {
   description: string;
   startTime: string;
   endTime: string;
-  date: string;
+  date:Date;
   attendees: string[];
   type: ScheduleEventType;
   location?: string;
+  created_at?: string;
 }
 
 // ---------- Files ----------

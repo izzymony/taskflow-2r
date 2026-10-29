@@ -33,7 +33,7 @@ export async function registerHandler(req: Request, res: Response, next: NextFun
 
     res.cookie("access_token", accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.cookie("refresh_token", refreshToken, {
       ...cookieOptions,
@@ -84,7 +84,7 @@ export async function loginHandler(req: Request, res: Response, next: NextFuncti
     // 4. Attach tokens inside secure HttpOnly cookie containers
     res.cookie("access_token", accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000, // 15 minutes match
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie("refresh_token", refreshToken, {

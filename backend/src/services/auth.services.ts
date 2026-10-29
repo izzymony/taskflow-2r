@@ -17,7 +17,7 @@ export async function createAccessToken(payload: SessionPayload): Promise<string
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(payload.userId))
     .setIssuedAt()
-    .setExpirationTime("15m")
+    .setExpirationTime("7d")
     .sign(JWT_SECRET);
 }
 
