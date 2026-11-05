@@ -1,5 +1,7 @@
 // Requests are sent to the same origin; Next.js proxies /api/* → NEXT_PUBLIC_API_URL.
 // This keeps cookies same-origin and avoids CORS issues in development and production.
+import { toast } from 'sonner'
+
 const API_BASE_URL = ''
 
 const TOKEN_KEY = 'taskflow_token'
@@ -67,7 +69,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new ApiError(payload?.message ?? 'Something went wrong', response.status)
+    const message = payload?.message ?? 'Something went wrong'
+    console.error(message)
+    if (typeof window !== 'undefined') toast.error(message)
+    throw new ApiError(message, response.status)
+  }
+
+  const message = payload?.message
+  if (message) {
+    console.log(message)
+    if (typeof window !== 'undefined' && init?.method && init.method !== 'GET') {
+      toast.success(message)
+    }
   }
 
   return payload as T

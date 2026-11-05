@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import './globals.css'
 import { Providers } from '@/components/providers'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Taskflow — Work, simplified',
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className="antialiased" suppressHydrationWarning>
         <Providers>
           {children}
+          <Toaster />
         {process.env.NODE_ENV === 'production' && <Analytics />}
          </Providers>
       </body>
