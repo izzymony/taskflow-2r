@@ -4,21 +4,23 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Calendar,
   CalendarDays,
-  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Clock,
   Edit2,
-  Filter,
-  List,
+  Inbox,
   MapPin,
   Plus,
+  Search,
   Trash2,
   Users,
   Video,
   X,
   CheckCircle2,
   AlertCircle,
+  SlidersHorizontal,
+  Bell,
+  Layers,
 } from 'lucide-react';
 
 import { PageHeader, TaskflowShell } from '../taskflow-shell';
@@ -46,63 +48,66 @@ interface SchedulePageProps {
   preview?: PagePreviewState;
 }
 
-type ViewMode = 'schedule' | 'day' | 'week';
+type ViewMode = 'timeline' | 'agenda';
 type FilterType = 'All' | ScheduleEventType;
 
 // Setup constants
 const NOW = new Date();
 const TODAY = `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}-${String(NOW.getDate()).padStart(2, '0')}`;
-const START_HOUR = 8;
-const END_HOUR = 20;
-const HOUR_HEIGHT = 68;
+// Default to 14 Nov 2026 if today is in demo mode or user wants reference match, else TODAY
+const DEFAULT_DATE = '2026-11-14';
 
-/** Theme styling matching Google Calendar & Apple/iOS Calendar aesthetic */
-const eventTheme: Record<
+// 24-hour range matching the iOS screenshot (06:00 to 23:00)
+const START_HOUR = 6;
+const END_HOUR = 23;
+const HOUR_HEIGHT = 62;
+
+/**
+ * Authentic Apple iOS Calendar Theme colors (dark mode)
+ * Meeting matches the exact cyan/teal palette from the screenshot (DEV FEST LAGOS 2026)
+ */
+const iosEventThemes: Record<
   ScheduleEventType,
   {
-    accent: string;
     cardBg: string;
     border: string;
-    borderLeft: string;
-    text: string;
+    stripe: string;
+    title: string;
+    timeText: string;
     dot: string;
-    badge: string;
-    avatarBg: string;
-    avatarText: string;
+    badgeBg: string;
+    badgeText: string;
   }
 > = {
   Meeting: {
-    accent: '#2563eb',
-    cardBg: 'bg-[#f0f6ff]',
-    border: 'border-[#dbeafe]',
-    borderLeft: 'border-l-[#2563eb]',
-    text: 'text-[#1e3a8a]',
-    dot: 'bg-[#2563eb]',
-    badge: 'bg-[#dbeafe] text-[#1e40af]',
-    avatarBg: 'bg-[#dbeafe]',
-    avatarText: 'text-[#1e40af]',
+    cardBg: 'bg-[#152730]/95',
+    border: 'border-[#1e3d4a]',
+    stripe: 'bg-[#4ecdc4]',
+    title: 'text-[#7fe7eb]',
+    timeText: 'text-[#5ca7b3]',
+    dot: 'bg-[#4ecdc4]',
+    badgeBg: 'bg-[#1e3d4a]',
+    badgeText: 'text-[#7fe7eb]',
   },
   Deadline: {
-    accent: '#ef4444',
-    cardBg: 'bg-[#fef2f2]',
-    border: 'border-[#fee2e2]',
-    borderLeft: 'border-l-[#ef4444]',
-    text: 'text-[#991b1b]',
-    dot: 'bg-[#ef4444]',
-    badge: 'bg-[#fee2e2] text-[#991b1b]',
-    avatarBg: 'bg-[#fee2e2]',
-    avatarText: 'text-[#991b1b]',
+    cardBg: 'bg-[#2b171a]/95',
+    border: 'border-[#4a2227]',
+    stripe: 'bg-[#ff453a]',
+    title: 'text-[#ffa1a7]',
+    timeText: 'text-[#d66b72]',
+    dot: 'bg-[#ff453a]',
+    badgeBg: 'bg-[#4a2227]',
+    badgeText: 'text-[#ffa1a7]',
   },
   Focus: {
-    accent: '#10b981',
-    cardBg: 'bg-[#ecfdf5]',
-    border: 'border-[#d1fae5]',
-    borderLeft: 'border-l-[#10b981]',
-    text: 'text-[#065f46]',
-    dot: 'bg-[#10b981]',
-    badge: 'bg-[#d1fae5] text-[#065f46]',
-    avatarBg: 'bg-[#d1fae5]',
-    avatarText: 'text-[#065f46]',
+    cardBg: 'bg-[#14261b]/95',
+    border: 'border-[#1f3f2b]',
+    stripe: 'bg-[#30d158]',
+    title: 'text-[#82e5a4]',
+    timeText: 'text-[#51b373]',
+    dot: 'bg-[#30d158]',
+    badgeBg: 'bg-[#1f3f2b]',
+    badgeText: 'text-[#82e5a4]',
   },
 };
 
@@ -138,6 +143,7 @@ function addDays(iso: string, days: number): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Get Monday of the week for an ISO date */
 function getStartOfWeek(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
@@ -167,7 +173,12 @@ function minutesFromTime(time: string): number {
   return (isNaN(hours) ? 9 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
 }
 
-/** Formats 24h string (e.g. 13:30) to 12h Google/Apple style (1:30 PM) */
+/** Formats 24h string (e.g. 13:30) to 24h format e.g. 13:30 (matching screenshot) */
+function formatTime24h(timeStr: string): string {
+  return normalizeTime(timeStr);
+}
+
+/** Formats 24h string to 12h AM/PM */
 function formatTime12h(timeStr: string): string {
   const norm = normalizeTime(timeStr);
   const [hStr, mStr] = norm.split(':');
@@ -181,55 +192,25 @@ function formatTime12h(timeStr: string): string {
   return `${h}:${mPadded} ${ampm}`;
 }
 
-/** Calculates clean duration tag like "45m" or "1 hr" or "1h 30m" */
-function getDurationLabel(startTime: string, endTime: string): string {
-  const start = minutesFromTime(startTime);
-  const end = minutesFromTime(endTime);
-  const diff = Math.max(0, end - start);
-  if (diff === 0) return '';
-  const hours = Math.floor(diff / 60);
-  const mins = diff % 60;
-  if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
-  if (hours > 0) return `${hours} hr${hours > 1 ? 's' : ''}`;
-  return `${mins}m`;
+/** Full month name for top left (e.g. "November") */
+function formatMonthName(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long' });
 }
 
-function formatMonthYear(iso: string): string {
+/** Subheader banner matching screenshot: "Saturday – 14 Nov 2026" */
+function formatIPhoneBannerDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function formatDateDisplay(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-function formatShortWeekday(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' });
+  const date = new Date(y, m - 1, d);
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const dayNum = date.getDate();
+  const month = date.toLocaleDateString('en-US', { month: 'short' });
+  const year = date.getFullYear();
+  return `${weekday} – ${dayNum} ${month} ${year}`;
 }
 
 function formatDayNumber(iso: string): number {
   return Number(iso.slice(-2));
-}
-
-function formatRelativeDate(iso: string): string {
-  if (iso === TODAY) return 'Today';
-  if (iso === addDays(TODAY, 1)) return 'Tomorrow';
-  if (iso === addDays(TODAY, -1)) return 'Yesterday';
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 function parseAttendees(attendees: unknown): string[] {
@@ -252,12 +233,28 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Dynamic demo initial events anchored to current day for seamless preview */
+/**
+ * High-fidelity initial demo events anchored to the reference screenshot
+ * (DEV FEST LAGOS 2026 on Saturday 14 Nov 2026) and today's schedule
+ */
 const INITIAL_EVENTS: IScheduleEvent[] = [
+  {
+    id: 'event-devfest',
+    user_id: 1,
+    title: 'DEV FEST LAGOS 2026',
+    description: 'Annual Google Developer Group Tech Conference & Keynotes',
+    startTime: '12:00',
+    endTime: '13:00',
+    date: new Date('2026-11-14'),
+    attendees: ['Amanuel Tadesse', 'Maya Chen', 'Sarah Chen'],
+    type: 'Meeting',
+    location: 'Landmark Centre, Lagos',
+    created_at: '2026-11-14',
+  },
   {
     id: 'demo-1',
     user_id: 1,
-    title: 'Product Design Sync',
+    title: 'PRODUCT DESIGN SYNC',
     description: 'Weekly review of the new mobile and desktop designs with the design team',
     startTime: '09:00',
     endTime: '10:00',
@@ -270,10 +267,10 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'demo-2',
     user_id: 1,
-    title: 'Focus: Sprint Architecture & Code Review',
+    title: 'FOCUS: SPRINT ARCHITECTURE',
     description: 'Deep uninterrupted focus time on the authentication refactor',
     startTime: '10:30',
-    endTime: '12:30',
+    endTime: '12:00',
     date: new Date(TODAY),
     attendees: [],
     type: 'Focus',
@@ -283,10 +280,10 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'demo-3',
     user_id: 1,
-    title: 'Client Check-in: Northstar Studio',
+    title: 'CLIENT CHECK-IN: NORTHSTAR STUDIO',
     description: 'Bi-weekly milestone check-in and delivery status',
-    startTime: '13:30',
-    endTime: '14:30',
+    startTime: '14:00',
+    endTime: '15:00',
     date: new Date(TODAY),
     attendees: ['David Kim', 'Amanuel Tadesse'],
     type: 'Meeting',
@@ -296,10 +293,10 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'demo-4',
     user_id: 1,
-    title: 'Q4 Product Roadmap Milestone',
+    title: 'Q4 ROADMAP SUBMISSION',
     description: 'Submit updated Q4 roadmap and milestone deliverables to leadership',
-    startTime: '16:00',
-    endTime: '17:00',
+    startTime: '16:30',
+    endTime: '17:30',
     date: new Date(TODAY),
     attendees: ['Elena Rostova'],
     type: 'Deadline',
@@ -309,54 +306,28 @@ const INITIAL_EVENTS: IScheduleEvent[] = [
   {
     id: 'demo-5',
     user_id: 1,
-    title: 'Design System Polish',
-    description: 'Component cleanup and tokens standardization',
-    startTime: '11:00',
-    endTime: '12:30',
-    date: new Date(addDays(TODAY, 1)),
-    attendees: ['Maya Chen', 'Jon Bell'],
-    type: 'Focus',
-    location: 'Design Lab',
-    created_at: TODAY,
+    title: 'ENGINEERING ALL-HANDS',
+    description: 'Department updates, releases review, and team Q&A',
+    startTime: '15:00',
+    endTime: '16:30',
+    date: new Date('2026-11-14'),
+    attendees: ['Jon Bell', 'David Kim', 'Alex Rivera'],
+    type: 'Meeting',
+    location: 'Virtual Auditorium',
+    created_at: '2026-11-14',
   },
   {
     id: 'demo-6',
     user_id: 1,
-    title: 'Marketing Strategy & Campaign Review',
-    description: 'Review performance metrics and prepare next week launch',
-    startTime: '14:00',
-    endTime: '15:00',
-    date: new Date(addDays(TODAY, 1)),
-    attendees: ['Aisha Patel', 'Sarah Chen'],
+    title: 'COMMUNITY MIXER & KEYNOTE',
+    description: 'Developer networking and community showcase',
+    startTime: '17:00',
+    endTime: '18:30',
+    date: new Date('2026-11-14'),
+    attendees: ['Amanuel Tadesse', 'Maya Chen'],
     type: 'Meeting',
-    location: 'Google Meet',
-    created_at: TODAY,
-  },
-  {
-    id: 'demo-7',
-    user_id: 1,
-    title: 'Monthly Invoice Run & Sign-off',
-    description: 'Finalize and dispatch all client retainer invoices',
-    startTime: '10:00',
-    endTime: '11:00',
-    date: new Date(addDays(TODAY, 2)),
-    attendees: ['Aisha Patel'],
-    type: 'Deadline',
-    location: 'Finance Portal',
-    created_at: TODAY,
-  },
-  {
-    id: 'demo-8',
-    user_id: 1,
-    title: 'Engineering All-Hands',
-    description: 'Engineering department updates and live Q&A',
-    startTime: '15:30',
-    endTime: '16:30',
-    date: new Date(addDays(TODAY, 3)),
-    attendees: ['Jon Bell', 'David Kim', 'Alex Rivera'],
-    type: 'Meeting',
-    location: 'Video Call',
-    created_at: TODAY,
+    location: 'Lagos Island Lounge',
+    created_at: '2026-11-14',
   },
 ];
 
@@ -364,11 +335,16 @@ export function SchedulePage({ preview }: SchedulePageProps) {
   const { status, retry } = useResource({ preview });
   const queryClient = useQueryClient();
 
-  const [selectedDate, setSelectedDate] = useState<string>(TODAY);
-  const [viewMode, setViewMode] = useState<ViewMode>('schedule');
+  // Active selected date: default to Nov 14 2026 matching the screenshot
+  const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DATE);
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [filter, setFilter] = useState<FilterType>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>('event-devfest');
+  const [showInboxDrawer, setShowInboxDrawer] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [toast, setToast] = useState<{
@@ -384,20 +360,20 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     }
   }, [toast]);
 
-  // Form state
+  // Form state for creating or editing events
   const [form, setForm] = useState<ICreateScheduleEventInput>({
     title: '',
     description: '',
-    startTime: '09:00',
-    endTime: '10:00',
-    date: new Date(TODAY),
+    startTime: '12:00',
+    endTime: '13:00',
+    date: new Date(selectedDate),
     attendees: [],
     type: 'Meeting' as ScheduleEventType,
     location: '',
   });
   const [attendeeInput, setAttendeeInput] = useState('');
 
-  // Fetch real schedules from backend
+  // Fetch real schedules from backend API
   const scheduleQuery = useQuery({
     queryKey: ['schedules'],
     queryFn: async () => {
@@ -416,13 +392,24 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     return INITIAL_EVENTS;
   }, [fetchedEvents, preview]);
 
-  // Filtered by event type
+  // Filtered by event type and search query
   const filteredEvents = useMemo(() => {
-    if (filter === 'All') return allEvents;
-    return allEvents.filter((ev) => ev.type === filter);
-  }, [allEvents, filter]);
+    return allEvents.filter((ev) => {
+      const matchesType = filter === 'All' || ev.type === filter;
+      if (!matchesType) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      const attendees = parseAttendees(ev.attendees).join(' ').toLowerCase();
+      return (
+        ev.title.toLowerCase().includes(q) ||
+        (ev.description && ev.description.toLowerCase().includes(q)) ||
+        (ev.location && ev.location.toLowerCase().includes(q)) ||
+        attendees.includes(q)
+      );
+    });
+  }, [allEvents, filter, searchQuery]);
 
-  // 7-day strip based on currently selected week
+  // 7-day strip based on currently selected week (Monday to Sunday like iOS)
   const currentWeekStart = useMemo(() => getStartOfWeek(selectedDate), [selectedDate]);
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(currentWeekStart, index)),
@@ -436,10 +423,16 @@ export function SchedulePage({ preview }: SchedulePageProps) {
       .sort((a, b) => minutesFromTime(a.startTime) - minutesFromTime(b.startTime));
   }, [filteredEvents, selectedDate]);
 
+  // Active selected event object (for details inspection)
+  const selectedEvent = useMemo(() => {
+    if (!selectedEventId) return dayEvents[0] || null;
+    return allEvents.find((e) => String(e.id) === String(selectedEventId)) || dayEvents[0] || null;
+  }, [allEvents, dayEvents, selectedEventId]);
+
   // Deadlines coming up this week
   const upcomingDeadlines = useMemo(() => {
     return allEvents
-      .filter((ev) => ev.type === 'Deadline' && toISODate(ev.date) >= TODAY)
+      .filter((ev) => ev.type === 'Deadline')
       .sort((a, b) => toISODate(a.date).localeCompare(toISODate(b.date)))
       .slice(0, 5);
   }, [allEvents]);
@@ -456,7 +449,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     );
   const focusHours = Math.round((focusMinutes / 60) * 10) / 10;
 
-  // Real-time current time indicator (Google / iOS calendar red line)
+  // Real-time current time indicator
   const currentMinutes = NOW.getHours() * 60 + NOW.getMinutes();
   const isCurrentTimeInRange =
     currentMinutes >= START_HOUR * 60 && currentMinutes <= END_HOUR * 60;
@@ -518,8 +511,8 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     setForm({
       title: '',
       description: '',
-      startTime: '09:00',
-      endTime: '10:00',
+      startTime: '12:00',
+      endTime: '13:00',
       date: new Date(selectedDate),
       attendees: [],
       type: 'Meeting',
@@ -535,8 +528,8 @@ export function SchedulePage({ preview }: SchedulePageProps) {
     setForm({
       title: '',
       description: '',
-      startTime: '09:00',
-      endTime: '10:00',
+      startTime: '12:00',
+      endTime: '13:00',
       date: new Date(targetDate),
       attendees: [],
       type: 'Meeting',
@@ -612,7 +605,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
         <div
           role="status"
           className={cn(
-            'toast flex items-start gap-3 shadow-lg backdrop-blur-md',
+            'toast flex items-start gap-3 shadow-2xl backdrop-blur-md',
             toast.type === 'success' && 'toast-success',
             toast.type === 'error' && 'toast-error',
             toast.type === 'warning' && 'border-l-4 border-l-amber-500',
@@ -639,9 +632,9 @@ export function SchedulePage({ preview }: SchedulePageProps) {
 
       {/* Page Header */}
       <PageHeader
-        eyebrow="CALENDAR & PLANNING"
+        eyebrow="CALENDAR & SCHEDULE"
         title="Schedule"
-        description="Plan meetings, protect deep focus, and hit critical project milestones."
+        description="Native iPhone-style calendar timeline and event scheduler."
         action={
           <div className="flex items-center gap-2">
             <button
@@ -656,12 +649,12 @@ export function SchedulePage({ preview }: SchedulePageProps) {
         }
       />
 
-      {/* Add / Edit Event Form Shell (Google Calendar Event Modal Style) */}
+      {/* Add / Edit Event Form Modal / Slide-down */}
       {isAdding ? (
         <div className="mb-6 animate-in fade-in-50 slide-in-from-top-2 duration-200">
           <FormShell
-            title={editingId ? 'Edit event' : 'Add new event'}
-            description="Meetings, deadlines, and focus blocks live in the same unified timeline."
+            title={editingId ? 'Edit event' : 'New event'}
+            description="Add or edit meetings, focus blocks, and milestone deadlines."
             onCancel={() => {
               setIsAdding(false);
               resetForm();
@@ -683,7 +676,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                   id="event-title"
                   value={form.title}
                   onChange={(e) => setForm((curr) => ({ ...curr, title: e.target.value }))}
-                  placeholder="e.g. Design review, Team sync, Deep work"
+                  placeholder="e.g. DEV FEST LAGOS 2026"
                   className={inputClass}
                   required
                 />
@@ -693,7 +686,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                 <div className="grid grid-cols-3 gap-2">
                   {(['Meeting', 'Deadline', 'Focus'] as ScheduleEventType[]).map((typeOption) => {
                     const isSelected = form.type === typeOption;
-                    const theme = eventTheme[typeOption];
+                    const theme = iosEventThemes[typeOption];
                     return (
                       <button
                         key={typeOption}
@@ -702,10 +695,9 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                         className={cn(
                           'flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-semibold transition',
                           isSelected
-                            ? `${theme.cardBg} ${theme.border} ${theme.text} shadow-xs ring-2 ring-slate-900/10`
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
                             : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
                         )}
-                        style={isSelected ? { borderColor: theme.accent } : undefined}
                       >
                         <span className={cn('size-2 rounded-full', theme.dot)} />
                         {typeOption}
@@ -756,13 +748,13 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                 </div>
               </Field>
 
-              <Field label="Location or Link" htmlFor="event-location">
+              <Field label="Location or Venue" htmlFor="event-location">
                 <div className="relative">
                   <input
                     id="event-location"
                     value={form.location ?? ''}
                     onChange={(e) => setForm((curr) => ({ ...curr, location: e.target.value }))}
-                    placeholder="e.g. Google Meet, Room 402, Video call"
+                    placeholder="e.g. Landmark Centre, Lagos"
                     className={inputClass}
                   />
                   <MapPin className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -779,14 +771,14 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                     id="event-attendees"
                     value={attendeeInput}
                     onChange={(e) => setAttendeeInput(e.target.value)}
-                    placeholder="Sarah Chen, Marcus Reed, Alex Rivera"
+                    placeholder="Amanuel Tadesse, Maya Chen, Sarah Chen"
                     className={inputClass}
                   />
                   <Users className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 </div>
               </Field>
 
-              <Field label="Description" htmlFor="event-description" className="sm:col-span-2">
+              <Field label="Description / Agenda" htmlFor="event-description" className="sm:col-span-2">
                 <textarea
                   id="event-description"
                   rows={2}
@@ -794,7 +786,7 @@ export function SchedulePage({ preview }: SchedulePageProps) {
                   onChange={(e) =>
                     setForm((curr) => ({ ...curr, description: e.target.value }))
                   }
-                  placeholder="Add notes, agenda items, or project context..."
+                  placeholder="Event details, keynote notes, or meeting agenda..."
                   className={cn(inputClass, 'h-auto py-2.5')}
                 />
               </Field>
@@ -803,706 +795,650 @@ export function SchedulePage({ preview }: SchedulePageProps) {
         </div>
       ) : null}
 
-      {/* Google Calendar & iPhone Calendar Navigation Header + Week Strip Panel */}
-      <section className="panel mb-6 overflow-hidden border border-slate-100 bg-white shadow-sm">
-        {/* Top Control Bar: Month Year Display, Prev/Next, Today, View Switcher & Filters */}
-        <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                  {formatMonthYear(selectedDate)}
-                </h2>
-                {selectedDate === TODAY && (
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                    Today
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Week of {formatShortWeekday(weekDays[0])} {formatDayNumber(weekDays[0])} –{' '}
-                {formatShortWeekday(weekDays[6])} {formatDayNumber(weekDays[6])}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Prev / Today / Next Controls */}
-            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-0.5 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setSelectedDate((curr) => addDays(curr, viewMode === 'day' ? -1 : -7))}
-                aria-label="Previous"
-                className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedDate(TODAY)}
-                className="px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedDate((curr) => addDays(curr, viewMode === 'day' ? 1 : 7))}
-                aria-label="Next"
-                className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-
-            {/* Google / Apple Calendar View Modes: Schedule (Agenda) | Day (Timeline) | Week */}
-            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100/70 p-0.5 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setViewMode('schedule')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all',
-                  viewMode === 'schedule'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <List className="size-3.5" />
-                <span>Schedule</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('day')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all',
-                  viewMode === 'day'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <Clock className="size-3.5" />
-                <span>Day</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('week')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all',
-                  viewMode === 'week'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <CalendarRange className="size-3.5" />
-                <span>Week</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* iPhone / iOS Calendar Style Week Strip */}
-        <div className="pt-4">
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-            {weekDays.map((dayIso) => {
-              const isSelected = dayIso === selectedDate;
-              const isTodayDay = dayIso === TODAY;
-              const dayEvs = allEvents.filter((ev) => toISODate(ev.date) === dayIso);
-              const eventCount = dayEvs.length;
-
-              // Distinct event type dots (Apple Calendar signature dots)
-              const hasMeeting = dayEvs.some((e) => e.type === 'Meeting');
-              const hasDeadline = dayEvs.some((e) => e.type === 'Deadline');
-              const hasFocus = dayEvs.some((e) => e.type === 'Focus');
-
-              return (
+      {/* Main Container: Responsive Grid with the iPhone Calendar as centerpiece */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* IPHONE CALENDAR INTERFACE (Matching Reference Screenshot) */}
+        <div className="lg:col-span-8 xl:col-span-8">
+          <div className="relative mx-auto max-w-2xl overflow-hidden rounded-3xl bg-black text-white shadow-2xl ring-1 ring-white/10 sm:rounded-[36px]">
+            {/* Top iOS Header Bar: < Month on Left | Action Pills on Right */}
+            <div className="flex items-center justify-between px-4 pt-5 pb-3 sm:px-6">
+              {/* Back / Month Navigation Pill */}
+              <div className="flex items-center gap-1.5">
                 <button
-                  key={dayIso}
                   type="button"
-                  onClick={() => setSelectedDate(dayIso)}
+                  onClick={() => setSelectedDate((curr) => addDays(curr, -7))}
+                  className="group flex items-center gap-1 rounded-full bg-[#1c1c1e] px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-[#2c2c2e] active:scale-95"
+                >
+                  <ChevronLeft className="size-4 stroke-[2.5] text-white transition-transform group-hover:-translate-x-0.5" />
+                  <span>{formatMonthName(selectedDate)}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate((curr) => addDays(curr, 7))}
+                  aria-label="Next week"
+                  className="rounded-full bg-[#1c1c1e] p-1.5 text-zinc-400 transition hover:bg-[#2c2c2e] hover:text-white"
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+
+              {/* Right Action Pill Group: [View Toggle, Search, Add Event] */}
+              <div className="flex items-center rounded-full bg-[#1c1c1e] p-1 text-white shadow-inner">
+                {/* View toggle (Agenda vs Timeline) */}
+                <button
+                  type="button"
+                  onClick={() => setViewMode((m) => (m === 'timeline' ? 'agenda' : 'timeline'))}
+                  title={viewMode === 'timeline' ? 'Switch to Agenda view' : 'Switch to Timeline view'}
                   className={cn(
-                    'group relative flex flex-col items-center justify-between rounded-2xl py-3 px-1 transition-all duration-200',
-                    isSelected
-                      ? 'bg-slate-900 text-white shadow-md'
-                      : 'bg-slate-50/60 text-slate-700 hover:bg-slate-100/90',
+                    'rounded-full p-2 text-zinc-300 transition hover:text-white active:scale-95',
+                    viewMode === 'agenda' ? 'bg-[#2c2c2e] text-white' : '',
                   )}
                 >
-                  {/* Weekday abbreviation */}
-                  <span
-                    className={cn(
-                      'text-[11px] font-bold uppercase tracking-wider',
-                      isSelected
-                        ? 'text-slate-300'
-                        : isTodayDay
-                          ? 'text-[#2563eb]'
-                          : 'text-slate-500',
-                    )}
-                  >
-                    {formatShortWeekday(dayIso)}
-                  </span>
-
-                  {/* Day of Month circle */}
-                  <div
-                    className={cn(
-                      'my-1.5 flex size-9 items-center justify-center rounded-full text-base font-bold transition-all',
-                      isSelected
-                        ? 'bg-[#2563eb] text-white shadow-sm ring-2 ring-white/30'
-                        : isTodayDay
-                          ? 'bg-[#2563eb] text-white shadow-sm'
-                          : 'text-slate-800 group-hover:scale-105',
-                    )}
-                  >
-                    {formatDayNumber(dayIso)}
-                  </div>
-
-                  {/* Apple Calendar signature event dot indicators */}
-                  <div className="flex h-1.5 items-center justify-center gap-1">
-                    {hasMeeting && (
-                      <span
-                        className={cn(
-                          'size-1.5 rounded-full',
-                          isSelected ? 'bg-blue-300' : 'bg-blue-500',
-                        )}
-                      />
-                    )}
-                    {hasDeadline && (
-                      <span
-                        className={cn(
-                          'size-1.5 rounded-full',
-                          isSelected ? 'bg-red-300' : 'bg-red-500',
-                        )}
-                      />
-                    )}
-                    {hasFocus && (
-                      <span
-                        className={cn(
-                          'size-1.5 rounded-full',
-                          isSelected ? 'bg-emerald-300' : 'bg-emerald-500',
-                        )}
-                      />
-                    )}
-                    {eventCount === 0 && <span className="size-1.5 opacity-0" />}
-                  </div>
+                  <Layers className="size-4" />
                 </button>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Filter Pills Bar */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-          <div className="flex items-center gap-1.5">
-            <Filter className="size-3.5 text-slate-400" />
-            <span className="text-xs font-semibold text-slate-500">Filter:</span>
-            {(['All', 'Meeting', 'Deadline', 'Focus'] as FilterType[]).map((f) => {
-              const active = filter === f;
-              return (
+                {/* Search toggle */}
                 <button
-                  key={f}
                   type="button"
-                  onClick={() => setFilter(f)}
+                  onClick={() => setIsSearching((s) => !s)}
+                  title="Search events"
                   className={cn(
-                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                    active
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                    'rounded-full p-2 text-zinc-300 transition hover:text-white active:scale-95',
+                    isSearching ? 'bg-[#2c2c2e] text-white' : '',
                   )}
                 >
-                  {f === 'All' ? 'All events' : f}
+                  <Search className="size-4" />
                 </button>
-              );
-            })}
-          </div>
 
-          <div className="text-xs text-slate-500">
-            Showing <strong className="text-slate-800">{dayEvents.length}</strong> event
-            {dayEvents.length === 1 ? '' : 's'} on {formatRelativeDate(selectedDate)}
-          </div>
-        </div>
-      </section>
-
-      {/* Main Calendar Area + Companion Sidebar */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content Area: Schedule List / Day Timeline / Week View */}
-        <section className="panel overflow-hidden border border-slate-100 bg-white p-0 shadow-sm lg:col-span-2">
-          {/* Panel Top Banner with Date & Quick stats */}
-          <div className="flex flex-col gap-2 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">
-                  {formatDateDisplay(selectedDate)}
-                </h3>
-                {selectedDate === TODAY && (
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                    Today
-                  </span>
-                )}
+                {/* Add event button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddForDate(selectedDate)}
+                  title="Add new event"
+                  className="rounded-full p-2 text-zinc-300 transition hover:text-white active:scale-95"
+                >
+                  <Plus className="size-4 stroke-[2.5]" />
+                </button>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {dayEvents.length} scheduled · {meetingCount} meeting
-                {meetingCount === 1 ? '' : 's'} · {focusHours}h focus · {deadlineCount} deadline
-                {deadlineCount === 1 ? '' : 's'}
-              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleOpenAddForDate(selectedDate)}
-              className="inline-flex items-center gap-1.5 self-start rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-            >
-              <Plus className="size-3.5 text-slate-600" />
-              <span>Add for this day</span>
-            </button>
-          </div>
-
-          {/* Body: Loading / Error / Views */}
-          {status === 'loading' ? (
-            <div className="p-6">
-              <PageLoading label="Loading calendar events…" rows={4} />
-            </div>
-          ) : status === 'error' ? (
-            <div className="p-6">
-              <PageError message={error ?? 'Could not load your calendar.'} onRetry={retry} />
-            </div>
-          ) : (
-            <div className="p-5 sm:p-6">
-              {/* VIEW 1: GOOGLE CALENDAR SCHEDULE (AGENDA) VIEW */}
-              {viewMode === 'schedule' && (
-                <div className="space-y-6">
-                  {dayEvents.length === 0 ? (
-                    <EmptyState
-                      icon={CalendarDays}
-                      title="No events scheduled for this day"
-                      description="Enjoy the open time or schedule a meeting, client deadline, or focus block."
-                      action={
-                        <button
-                          type="button"
-                          onClick={() => handleOpenAddForDate(selectedDate)}
-                          className="primary-button"
-                        >
-                          <Plus className="size-4" /> Add event
-                        </button>
-                      }
-                    />
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {dayEvents.map((event) => {
-                        const theme = eventTheme[event.type];
-                        const attendeesList = parseAttendees(event.attendees);
-                        const isVideo =
-                          event.location &&
-                          /meet|zoom|call|video|teams|hangout/i.test(event.location);
-
-                        return (
-                          <article
-                            key={event.id}
-                            className={cn(
-                              'group relative my-3 flex flex-col gap-3 rounded-2xl border p-4 transition-all hover:shadow-md sm:flex-row sm:items-start sm:gap-4',
-                              theme.cardBg,
-                              theme.border,
-                              theme.borderLeft,
-                              'border-l-4',
-                            )}
-                          >
-                            {/* Time badge column (Google / Apple Calendar layout) */}
-                            <div className="flex shrink-0 items-center justify-between sm:w-36 sm:flex-col sm:items-start sm:justify-start">
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                                <Clock className="size-3.5 text-slate-500" />
-                                <span>{formatTime12h(event.startTime)}</span>
-                              </div>
-                              <div className="text-[11px] font-medium text-slate-500 sm:mt-1">
-                                to {formatTime12h(event.endTime)}
-                              </div>
-                              <span className="mt-1 inline-flex rounded-md bg-white/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 shadow-2xs">
-                                {getDurationLabel(event.startTime, event.endTime)}
-                              </span>
-                            </div>
-
-                            {/* Event details column */}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-base font-bold text-slate-900">
-                                      {event.title}
-                                    </h4>
-                                    <span
-                                      className={cn(
-                                        'rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider',
-                                        theme.badge,
-                                      )}
-                                    >
-                                      {event.type}
-                                    </span>
-                                  </div>
-                                  {event.description && (
-                                    <p className="mt-1 text-xs text-slate-600 line-clamp-2">
-                                      {event.description}
-                                    </p>
-                                  )}
-                                </div>
-
-                                {/* Hover actions: Edit & Delete */}
-                                <div className="flex shrink-0 items-center gap-1 opacity-90 transition group-hover:opacity-100">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEdit(event)}
-                                    aria-label={`Edit ${event.title}`}
-                                    className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-900"
-                                  >
-                                    <Edit2 className="size-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteEvent(event.id)}
-                                    aria-label={`Remove ${event.title}`}
-                                    className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-red-600"
-                                  >
-                                    <Trash2 className="size-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Footer metadata: Location & Attendees */}
-                              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200/50 pt-2.5 text-xs text-slate-600">
-                                {event.location && (
-                                  <div className="inline-flex items-center gap-1.5 font-medium">
-                                    {isVideo ? (
-                                      <Video className="size-3.5 text-blue-600" />
-                                    ) : (
-                                      <MapPin className="size-3.5 text-slate-500" />
-                                    )}
-                                    <span>{event.location}</span>
-                                  </div>
-                                )}
-
-                                {attendeesList.length > 0 && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Users className="size-3.5 text-slate-500" />
-                                    <div className="flex -space-x-1 overflow-hidden">
-                                      {attendeesList.slice(0, 3).map((name) => (
-                                        <span
-                                          key={name}
-                                          title={name}
-                                          className={cn(
-                                            'inline-flex size-5 items-center justify-center rounded-full text-[9px] font-bold ring-1 ring-white',
-                                            theme.avatarBg,
-                                            theme.avatarText,
-                                          )}
-                                        >
-                                          {getInitials(name)}
-                                        </span>
-                                      ))}
-                                    </div>
-                                    <span className="text-[11px] text-slate-500">
-                                      {attendeesList.join(', ')}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
+            {/* Optional Collapsible Search Bar */}
+            {isSearching && (
+              <div className="animate-in fade-in slide-in-from-top-1 px-4 pb-2 sm:px-6">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search events, locations, speakers..."
+                    className="w-full rounded-xl border border-zinc-800 bg-[#1c1c1e] py-1.5 pr-8 pl-9 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-600"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                    >
+                      <X className="size-3.5" />
+                    </button>
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* VIEW 2: GOOGLE CALENDAR & APPLE CALENDAR HOURLY DAY TIMELINE */}
-              {viewMode === 'day' && (
-                <div className="relative">
+            {/* 7-Day Week Strip: M T W T F S S with circular date indicators */}
+            <div className="px-2 pt-1 pb-3 sm:px-4">
+              <div className="grid grid-cols-7 text-center">
+                {/* Weekday single letters (M T W T F S S) */}
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((dayLetter, idx) => (
+                  <div key={idx} className="text-[11px] font-semibold text-zinc-400">
+                    {dayLetter}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-2 grid grid-cols-7 text-center">
+                {weekDays.map((dayIso) => {
+                  const isSelected = dayIso === selectedDate;
+                  const isTodayDay = dayIso === TODAY;
+                  const dayEvs = allEvents.filter((ev) => toISODate(ev.date) === dayIso);
+
+                  return (
+                    <div key={dayIso} className="flex flex-col items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(dayIso);
+                          const ev = allEvents.find((e) => toISODate(e.date) === dayIso);
+                          if (ev) setSelectedEventId(String(ev.id));
+                        }}
+                        className={cn(
+                          'flex size-8 items-center justify-center rounded-full text-sm font-semibold transition-all sm:size-9 sm:text-base',
+                          isSelected
+                            ? 'bg-white font-bold text-black shadow-md'
+                            : isTodayDay
+                              ? 'text-[#4ecdc4] hover:bg-[#1c1c1e]'
+                              : 'text-zinc-200 hover:bg-[#1c1c1e]',
+                        )}
+                      >
+                        {formatDayNumber(dayIso)}
+                      </button>
+
+                      {/* Event indicator dot */}
+                      <div className="mt-1 flex h-1 items-center justify-center gap-0.5">
+                        {dayEvs.length > 0 ? (
+                          <span
+                            className={cn(
+                              'size-1 rounded-full',
+                              isSelected ? 'bg-zinc-400' : 'bg-[#4ecdc4]',
+                            )}
+                          />
+                        ) : (
+                          <span className="size-1 opacity-0" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Date Subheader Banner: "Saturday – 14 Nov 2026" */}
+            <div className="border-t border-zinc-900 bg-black py-2.5 text-center">
+              <h3 className="text-sm font-semibold tracking-wide text-white sm:text-base">
+                {formatIPhoneBannerDate(selectedDate)}
+              </h3>
+            </div>
+
+            {/* HOURLY TIMELINE CANVAS (Exact match to screenshot) */}
+            {viewMode === 'timeline' ? (
+              <div
+                className="relative h-[560px] overflow-y-auto border-t border-zinc-900 bg-black pr-2 select-none sm:h-[620px]"
+                tabIndex={0}
+                aria-label="Timeline schedule"
+              >
+                {/* Hour Guidelines and Labels (06:00 to 23:00) */}
+                {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => {
+                  const hour = START_HOUR + index;
+                  const timeLabel = `${String(hour).padStart(2, '0')}:00`;
+                  const topPos = index * HOUR_HEIGHT;
+
+                  return (
+                    <div
+                      key={hour}
+                      className="absolute inset-x-0 flex items-center"
+                      style={{ top: `${topPos}px` }}
+                    >
+                      {/* Left Time Label (06:00, 07:00, etc.) */}
+                      <div className="w-14 shrink-0 pr-3 text-right text-[11px] font-medium text-zinc-500 sm:w-16 sm:text-xs">
+                        {timeLabel}
+                      </div>
+
+                      {/* Thin horizontal guideline */}
+                      <div className="flex-1 border-b border-zinc-900" />
+                    </div>
+                  );
+                })}
+
+                {/* Live Red "Current Time" Indicator Line (if today is selected) */}
+                {selectedDate === TODAY && isCurrentTimeInRange && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
+                    style={{ top: `${currentTimeTop}px` }}
+                  >
+                    <div className="w-14 shrink-0 pr-1 text-right text-[10px] font-bold text-red-500 sm:w-16">
+                      <span className="inline-block size-2 rounded-full bg-red-500 ring-2 ring-red-900/60" />
+                    </div>
+                    <div className="flex-1 border-t-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
+                  </div>
+                )}
+
+                {/* Event Cards Rendered on Timeline */}
+                <div
+                  className="relative ml-14 sm:ml-16"
+                  style={{ height: (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT }}
+                >
                   {dayEvents.length === 0 ? (
-                    <div className="mb-4 rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">
-                      No events placed in the hourly timeline today. Click "+ Add for this day" to schedule.
+                    <div className="absolute inset-x-4 top-20 rounded-2xl border border-zinc-900 bg-[#121214]/60 p-6 text-center text-xs text-zinc-500">
+                      <p>No events scheduled for {formatIPhoneBannerDate(selectedDate)}.</p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAddForDate(selectedDate)}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#1c1c1e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2c2c2e]"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>Add event</span>
+                      </button>
                     </div>
                   ) : null}
 
-                  <div className="flex">
-                    {/* Time Gutter Column */}
-                    <div className="w-16 shrink-0 select-none pr-3">
-                      {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => {
-                        const hour = START_HOUR + index;
-                        const h12 = hour % 12 === 0 ? 12 : hour % 12;
-                        const ampm = hour >= 12 ? 'PM' : 'AM';
-                        return (
-                          <div
-                            key={hour}
-                            style={{ height: HOUR_HEIGHT }}
-                            className="flex items-start justify-end text-[11px] font-semibold text-slate-400"
-                          >
-                            <span>
-                              {h12} {ampm}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {dayEvents.map((event) => {
+                    const startMin = minutesFromTime(event.startTime);
+                    const endMin = minutesFromTime(event.endTime);
+                    const duration = Math.max(30, endMin - startMin);
 
-                    {/* Timeline Grid Canvas */}
-                    <div
-                      className="relative flex-1 border-l border-slate-200"
-                      style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}
-                    >
-                      {/* Hour divider lines */}
-                      {Array.from({ length: END_HOUR - START_HOUR }, (_, index) => (
-                        <div
-                          key={index}
-                          className="absolute left-0 right-0 border-b border-slate-100"
-                          style={{ top: index * HOUR_HEIGHT }}
-                        >
-                          {/* Subtle half-hour mark */}
-                          <div
-                            className="absolute left-0 right-0 border-b border-dashed border-slate-100/60"
-                            style={{ top: HOUR_HEIGHT / 2 }}
-                          />
-                        </div>
-                      ))}
-
-                      {/* Google/Apple Calendar Red "Current Time" Indicator Line */}
-                      {selectedDate === TODAY && isCurrentTimeInRange && (
-                        <div
-                          className="pointer-events-none absolute left-0 right-0 z-30 flex items-center"
-                          style={{ top: currentTimeTop }}
-                        >
-                          <div className="absolute -left-3 size-2.5 rounded-full bg-red-500 shadow-sm ring-2 ring-white" />
-                          <div className="w-full border-t-2 border-red-500" />
-                        </div>
-                      )}
-
-                      {/* Positioned Event Cards */}
-                      {dayEvents.map((event) => {
-                        const startMin = minutesFromTime(event.startTime);
-                        const endMin = minutesFromTime(event.endTime);
-                        const duration = Math.max(25, endMin - startMin);
-
-                        const top =
-                          Math.max(0, (startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-                        const height = Math.max(34, (duration / 60) * HOUR_HEIGHT - 4);
-                        const theme = eventTheme[event.type];
-
-                        return (
-                          <div
-                            key={event.id}
-                            style={{ top: `${top}px`, height: `${height}px` }}
-                            className={cn(
-                              'group absolute inset-x-2 z-10 flex flex-col justify-between overflow-hidden rounded-xl border p-2.5 shadow-sm transition hover:z-20 hover:shadow-md',
-                              theme.cardBg,
-                              theme.border,
-                              theme.borderLeft,
-                              'border-l-4',
-                            )}
-                          >
-                            <div className="flex items-start justify-between gap-1">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className={cn('size-1.5 rounded-full', theme.dot)} />
-                                  <h5 className="truncate text-xs font-bold text-slate-900">
-                                    {event.title}
-                                  </h5>
-                                </div>
-                                <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold text-slate-500">
-                                  <span>
-                                    {formatTime12h(event.startTime)} –{' '}
-                                    {formatTime12h(event.endTime)}
-                                  </span>
-                                  {event.location && (
-                                    <span className="truncate text-slate-400">
-                                      · {event.location}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEdit(event)}
-                                  className="rounded p-1 text-slate-500 hover:bg-white hover:text-slate-900"
-                                >
-                                  <Edit2 className="size-3" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteEvent(event.id)}
-                                  className="rounded p-1 text-slate-500 hover:bg-white hover:text-red-600"
-                                >
-                                  <Trash2 className="size-3" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* VIEW 3: 7-DAY WEEK OVERVIEW */}
-              {viewMode === 'week' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-7">
-                  {weekDays.map((dayIso) => {
-                    const isSelected = dayIso === selectedDate;
-                    const isTodayDay = dayIso === TODAY;
-                    const dayEvs = filteredEvents.filter((ev) => toISODate(ev.date) === dayIso);
+                    // Offset top position relative to START_HOUR
+                    const top = Math.max(0, ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT);
+                    const height = Math.max(44, (duration / 60) * HOUR_HEIGHT - 2);
+                    const theme = iosEventThemes[event.type] || iosEventThemes.Meeting;
+                    const isSelected = selectedEventId === String(event.id);
 
                     return (
                       <div
-                        key={dayIso}
-                        onClick={() => setSelectedDate(dayIso)}
+                        key={event.id}
+                        onClick={() => setSelectedEventId(String(event.id))}
+                        style={{ top: `${top}px`, height: `${height}px` }}
                         className={cn(
-                          'flex flex-col rounded-xl border p-2.5 transition cursor-pointer',
-                          isSelected
-                            ? 'border-[#2563eb] bg-blue-50/20 ring-1 ring-[#2563eb]'
-                            : 'border-slate-100 bg-white hover:border-slate-200',
+                          'group absolute inset-x-2 z-10 flex cursor-pointer items-start overflow-hidden rounded-lg border transition-all sm:inset-x-3',
+                          theme.cardBg,
+                          theme.border,
+                          isSelected ? 'ring-1 ring-white/40' : 'hover:ring-1 hover:ring-white/20',
                         )}
                       >
-                        <div className="mb-2 flex items-center justify-between border-b border-slate-100 pb-1.5">
-                          <span className="text-[11px] font-bold text-slate-600">
-                            {formatShortWeekday(dayIso)}
-                          </span>
-                          <span
+                        {/* Left Vertical Accent Stripe (matching reference screenshot) */}
+                        <div className={cn('h-full w-1 shrink-0 rounded-l sm:w-1.5', theme.stripe)} />
+
+                        {/* Card Information */}
+                        <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-1.5">
+                          {/* Title */}
+                          <h4
                             className={cn(
-                              'flex size-6 items-center justify-center rounded-full text-xs font-bold',
-                              isTodayDay
-                                ? 'bg-[#2563eb] text-white'
-                                : isSelected
-                                  ? 'bg-slate-900 text-white'
-                                  : 'text-slate-800',
+                              'truncate text-xs font-bold tracking-wide uppercase sm:text-sm',
+                              theme.title,
                             )}
                           >
-                            {formatDayNumber(dayIso)}
-                          </span>
+                            {event.title}
+                          </h4>
+
+                          {/* Time with Clock icon */}
+                          <div
+                            className={cn(
+                              'mt-0.5 flex items-center gap-1.5 text-[11px] font-medium sm:text-xs',
+                              theme.timeText,
+                            )}
+                          >
+                            <Clock className="size-3 shrink-0" />
+                            <span>
+                              {formatTime24h(event.startTime)} – {formatTime24h(event.endTime)}
+                            </span>
+                            {event.location ? (
+                              <span className="truncate opacity-70">· {event.location}</span>
+                            ) : null}
+                          </div>
                         </div>
 
-                        <div className="space-y-1.5 min-h-[140px]">
-                          {dayEvs.length === 0 ? (
-                            <p className="text-[10px] text-slate-400 italic pt-2 text-center">
-                              Free day
-                            </p>
-                          ) : (
-                            dayEvs.map((ev) => {
-                              const theme = eventTheme[ev.type];
-                              return (
-                                <div
-                                  key={ev.id}
-                                  className={cn(
-                                    'rounded-lg border p-1.5 text-[11px] font-medium leading-tight',
-                                    theme.cardBg,
-                                    theme.border,
-                                    theme.borderLeft,
-                                    'border-l-2',
-                                  )}
-                                >
-                                  <div className="truncate font-bold text-slate-900">{ev.title}</div>
-                                  <div className="text-[10px] text-slate-500">
-                                    {formatTime12h(ev.startTime)}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
+                        {/* Hover Quick Edit / Delete Controls */}
+                        <div className="flex shrink-0 items-center gap-0.5 pr-2 pt-1.5 opacity-0 transition group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartEdit(event);
+                            }}
+                            className="rounded p-1 text-zinc-400 hover:bg-white/10 hover:text-white"
+                            title="Edit event"
+                          >
+                            <Edit2 className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEvent(event.id);
+                            }}
+                            className="rounded p-1 text-zinc-400 hover:bg-white/10 hover:text-red-400"
+                            title="Delete event"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* Sidebar Companion Widgets (Google & iPhone Calendar companion panels) */}
-        <aside className="space-y-6">
-          {/* Widget 1: Day Overview Card */}
-          <div className="panel border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Day Overview</h4>
-                <p className="text-xs text-slate-500">{formatRelativeDate(selectedDate)}</p>
               </div>
-              <Calendar className="size-4 text-slate-400" />
-            </div>
-
-            {/* Quick Metrics */}
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-blue-50/80 p-2.5">
-                <p className="text-lg font-bold text-blue-700">{meetingCount}</p>
-                <p className="text-[10px] font-semibold text-blue-600">Meetings</p>
-              </div>
-              <div className="rounded-xl bg-emerald-50/80 p-2.5">
-                <p className="text-lg font-bold text-emerald-700">{focusHours}h</p>
-                <p className="text-[10px] font-semibold text-emerald-600">Focus</p>
-              </div>
-              <div className="rounded-xl bg-red-50/80 p-2.5">
-                <p className="text-lg font-bold text-red-700">{deadlineCount}</p>
-                <p className="text-[10px] font-semibold text-red-600">Deadlines</p>
-              </div>
-            </div>
-
-            {/* Mini Agenda of the selected day */}
-            <div className="mt-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Timeline Flow
-              </p>
-              {dayEvents.length === 0 ? (
-                <p className="mt-2 text-xs text-slate-400 italic">No scheduled items today.</p>
-              ) : (
-                <ul className="mt-2 space-y-2.5">
-                  {dayEvents.map((ev) => (
-                    <li key={ev.id} className="flex items-start gap-2.5 text-xs">
-                      <span
-                        className={cn(
-                          'mt-1 size-2 shrink-0 rounded-full',
-                          eventTheme[ev.type].dot,
-                        )}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-slate-800">{ev.title}</p>
-                        <p className="text-[11px] text-slate-500">
-                          {formatTime12h(ev.startTime)} – {formatTime12h(ev.endTime)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Widget 2: Upcoming Deadlines Card */}
-          <div className="panel border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Upcoming Deadlines</h4>
-                <p className="text-xs text-slate-500">Priorities requiring delivery</p>
-              </div>
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-                {upcomingDeadlines.length}
-              </span>
-            </div>
-
-            {upcomingDeadlines.length === 0 ? (
-              <p className="mt-4 text-xs text-slate-500">No active deadlines left for this period.</p>
             ) : (
-              <div className="mt-3 space-y-2.5">
-                {upcomingDeadlines.map((dl) => (
-                  <div
-                    key={dl.id}
-                    className="flex items-start justify-between gap-2 rounded-xl border border-red-100 bg-red-50/40 p-2.5 transition hover:bg-red-50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-slate-900">{dl.title}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
-                        {formatRelativeDate(toISODate(dl.date))} · {formatTime12h(dl.startTime)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
-                      Due
-                    </span>
+              /* AGENDA LIST VIEW */
+              <div className="h-[560px] overflow-y-auto border-t border-zinc-900 bg-black p-4 sm:h-[620px] sm:p-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">
+                    Events for {formatIPhoneBannerDate(selectedDate)}
+                  </span>
+                  <span className="rounded-full bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-bold text-zinc-400">
+                    {dayEvents.length} total
+                  </span>
+                </div>
+
+                {dayEvents.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-zinc-500">
+                    No events scheduled for this day.
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-3">
+                    {dayEvents.map((event) => {
+                      const theme = iosEventThemes[event.type] || iosEventThemes.Meeting;
+                      const attendees = parseAttendees(event.attendees);
+
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={() => setSelectedEventId(String(event.id))}
+                          className={cn(
+                            'group flex cursor-pointer items-start rounded-xl border p-3 transition',
+                            theme.cardBg,
+                            theme.border,
+                            selectedEventId === String(event.id) ? 'ring-1 ring-white/40' : '',
+                          )}
+                        >
+                          <div className={cn('h-10 w-1 shrink-0 rounded-full', theme.stripe)} />
+                          <div className="ml-3 min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className={cn('text-sm font-bold uppercase', theme.title)}>
+                                {event.title}
+                              </h4>
+                              <span
+                                className={cn(
+                                  'rounded-md px-2 py-0.5 text-[10px] font-bold',
+                                  theme.badgeBg,
+                                  theme.badgeText,
+                                )}
+                              >
+                                {event.type}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                              <Clock className="size-3.5" />
+                              <span>
+                                {formatTime24h(event.startTime)} – {formatTime24h(event.endTime)}
+                              </span>
+                            </div>
+
+                            {event.location ? (
+                              <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                                <MapPin className="size-3.5" />
+                                <span>{event.location}</span>
+                              </div>
+                            ) : null}
+
+                            {attendees.length > 0 ? (
+                              <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                                <Users className="size-3.5" />
+                                <span>{attendees.join(', ')}</span>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="ml-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(event);
+                              }}
+                              className="rounded p-1 text-zinc-400 hover:text-white"
+                            >
+                              <Edit2 className="size-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.id);
+                              }}
+                              className="rounded p-1 text-zinc-400 hover:text-red-400"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* FLOATING BOTTOM BAR (Signature iOS calendar pill buttons) */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4 sm:px-6">
+              {/* Bottom Left: "Today" pill button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate(TODAY);
+                }}
+                className="pointer-events-auto rounded-full border border-white/10 bg-[#1c1c1e]/90 px-4 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition hover:bg-[#2c2c2e] active:scale-95 sm:text-sm"
+              >
+                Today
+              </button>
+
+              {/* Bottom Right: Pill group with Calendar & Inbox icons */}
+              <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-white/10 bg-[#1c1c1e]/90 px-3.5 py-1.5 shadow-xl backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setViewMode((m) => (m === 'timeline' ? 'agenda' : 'timeline'))}
+                  title="Toggle calendar view"
+                  className="rounded-full p-1 text-zinc-300 transition hover:text-white"
+                >
+                  <CalendarDays className="size-4" />
+                </button>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowInboxDrawer((prev) => !prev)}
+                    title="Upcoming deadlines & invitations"
+                    className="rounded-full p-1 text-zinc-300 transition hover:text-white"
+                  >
+                    <Inbox className="size-4" />
+                  </button>
+                  {upcomingDeadlines.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
+                      {upcomingDeadlines.length}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Collapsible Inbox / Deadlines Tray */}
+            {showInboxDrawer && (
+              <div className="absolute inset-x-0 bottom-16 z-50 animate-in fade-in slide-in-from-bottom-2 p-4">
+                <div className="mx-auto max-w-md rounded-2xl border border-zinc-800 bg-[#1c1c1e]/95 p-4 shadow-2xl backdrop-blur-lg">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Inbox className="size-4 text-red-400" />
+                      <h4 className="text-xs font-bold text-white">Upcoming Deadlines & Actions</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowInboxDrawer(false)}
+                      className="rounded p-1 text-zinc-400 hover:text-white"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                  <div className="mt-2.5 max-h-48 space-y-2 overflow-y-auto">
+                    {upcomingDeadlines.length === 0 ? (
+                      <p className="py-2 text-center text-xs text-zinc-500">No pending deadlines.</p>
+                    ) : (
+                      upcomingDeadlines.map((dl) => (
+                        <div
+                          key={dl.id}
+                          onClick={() => {
+                            setSelectedDate(toISODate(dl.date));
+                            setSelectedEventId(String(dl.id));
+                            setShowInboxDrawer(false);
+                          }}
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-red-900/30 bg-red-950/20 p-2 transition hover:bg-red-950/40"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="truncate text-xs font-bold text-red-200">{dl.title}</p>
+                            <p className="text-[10px] text-zinc-400">
+                              {toISODate(dl.date)} · {formatTime24h(dl.startTime)}
+                            </p>
+                          </div>
+                          <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-400">
+                            Due
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* COMPANION SIDEBAR (Responsive Desktop/Tablet productivity details) */}
+        <aside className="space-y-6 lg:col-span-4 xl:col-span-4">
+          {/* Card 1: Selected Event Details & Fast Actions */}
+          <div className="panel border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Event Details</h4>
+                <p className="text-xs text-slate-500">Selected calendar item</p>
+              </div>
+              {selectedEvent && (
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                    selectedEvent.type === 'Meeting'
+                      ? 'bg-cyan-100 text-cyan-800'
+                      : selectedEvent.type === 'Deadline'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-emerald-100 text-emerald-800',
+                  )}
+                >
+                  {selectedEvent.type}
+                </span>
+              )}
+            </div>
+
+            {selectedEvent ? (
+              <div className="mt-4 space-y-3.5">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{selectedEvent.title}</h3>
+                  {selectedEvent.description && (
+                    <p className="mt-1 text-xs text-slate-600">{selectedEvent.description}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-700">
+                  <div className="flex items-center gap-2">
+                    <Clock className="size-4 text-slate-500" />
+                    <span>
+                      {formatTime24h(selectedEvent.startTime)} – {formatTime24h(selectedEvent.endTime)} ({formatTime12h(selectedEvent.startTime)})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar className="size-4 text-slate-500" />
+                    <span>{formatIPhoneBannerDate(toISODate(selectedEvent.date))}</span>
+                  </div>
+
+                  {selectedEvent.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="size-4 text-slate-500" />
+                      <span>{selectedEvent.location}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Attendees */}
+                {parseAttendees(selectedEvent.attendees).length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      Attendees ({parseAttendees(selectedEvent.attendees).length})
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {parseAttendees(selectedEvent.attendees).map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs"
+                        >
+                          <span className="flex size-4 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-600">
+                            {getInitials(name)}
+                          </span>
+                          <span>{name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdit(selectedEvent)}
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <Edit2 className="size-3.5" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                    title="Remove event"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-slate-400 italic">
+                Select an event from the timeline to inspect its full details.
+              </p>
+            )}
+          </div>
+
+          {/* Card 2: Day Metrics & Agenda Summary */}
+          <div className="panel border border-slate-100 bg-white p-5 shadow-sm">
+            <h4 className="text-sm font-bold text-slate-900">Day Breakdown</h4>
+            <p className="text-xs text-slate-500">{formatIPhoneBannerDate(selectedDate)}</p>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl bg-cyan-50 p-2.5">
+                <p className="text-lg font-bold text-cyan-800">{meetingCount}</p>
+                <p className="text-[10px] font-semibold text-cyan-700">Meetings</p>
+              </div>
+              <div className="rounded-xl bg-emerald-50 p-2.5">
+                <p className="text-lg font-bold text-emerald-800">{focusHours}h</p>
+                <p className="text-[10px] font-semibold text-emerald-700">Focus</p>
+              </div>
+              <div className="rounded-xl bg-red-50 p-2.5">
+                <p className="text-lg font-bold text-red-800">{deadlineCount}</p>
+                <p className="text-[10px] font-semibold text-red-700">Deadlines</p>
+              </div>
+            </div>
+
+            {/* Quick Filter tabs */}
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+              <span className="text-xs font-semibold text-slate-500">Filter type:</span>
+              <div className="flex items-center gap-1">
+                {(['All', 'Meeting', 'Deadline', 'Focus'] as FilterType[]).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      'rounded-md px-2 py-0.5 text-[11px] font-medium transition',
+                      filter === f
+                        ? 'bg-slate-900 text-white font-semibold'
+                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </aside>
       </div>
